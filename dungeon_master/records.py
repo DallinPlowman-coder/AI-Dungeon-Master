@@ -50,7 +50,6 @@ class CharacterSheet(Record):
     class_name: Name = ""
     subclass: Name = ""
     background: Name = ""
-    alignment: Name = ""
     level: int = Field(1, ge=1, le=20)
     experience: int = Field(0, ge=0)
     abilities: Abilities = Field(default_factory=Abilities)

@@ -23,7 +23,7 @@ def markdown_document(campaign, kind, dm=False):
         lines += [f"Player: {sheet.player_name or '—'} · Pronouns: {sheet.pronouns or '—'}", "",
                   f"Ancestry: {sheet.ancestry or '—'} · Background: {sheet.background or '—'}", "",
                   f"Class: {sheet.class_name or '—'} · Subclass: {sheet.subclass or '—'} · Level: {sheet.level}", "",
-                  f"Alignment: {sheet.alignment or '—'} · Experience: {sheet.experience}", ""]
+                  f"Experience: {sheet.experience}", ""]
         lines += ["## Ability scores", "", "| Ability | Score | Modifier | Saving throw |", "| --- | --- | --- | --- |"]
         for key in ABILITIES:
             lines += [f"| {key.title()} | {stats['abilities'][key]} | {signed(derived['modifiers'][key])} | {signed(derived['saving_throws'][key])} |"]
@@ -47,6 +47,14 @@ def markdown_document(campaign, kind, dm=False):
                 lines += [f"## {key.replace('_', ' ').title()}", "", stats[key], ""]
         if dm:
             lines += ["## Private character notes", "", stats["dm_notes"] or "Nothing recorded yet.", ""]
+            alignment = campaign.get("alignment", {})
+            lines += ["## Private alignment memory", "", f"Tendency: {alignment.get('label', 'undetermined')}", ""]
+            for review in alignment.get("history", []):
+                result = review.get("result")
+                lines += [f"Level {review['level']} review: {review['status']}", ""]
+                if result:
+                    lines += [f"{result['before']} → {result['after']} · {result['reason']}", ""]
+                    lines += [f"- {item['reason']} (event {item['event_id']})" for item in result["observations"]] + [""]
     elif kind == "log":
         for event in campaign["events"]:
             lines += [f"## Session {event['session']} · {event['title']}", "",
@@ -168,4 +176,6 @@ def pdf_document(markdown):
 def json_document(campaign, kind):
     data = {"campaign":campaign["name"], "character":campaign["character"], "derived":campaign["derived"]} if kind == "character" else {
         "campaign":campaign["name"], kind:campaign[{"log":"events", "relationships":"npcs", "plan":"plan"}[kind]]}
+    if kind == "character" and "alignment" in campaign:
+        data["alignment"] = campaign["alignment"]
     return json.dumps(data, ensure_ascii=False, indent=2).encode()

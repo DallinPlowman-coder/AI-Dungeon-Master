@@ -21,6 +21,7 @@ from .library import Library
 from .campaign_store import CampaignStore
 from .campaign_api import campaign_routes
 from .planning import CampaignPlanning
+from .alignment import AlignmentTracking
 
 
 STATIC = Path(__file__).parent / "static"
@@ -77,6 +78,7 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
     library = Library(settings, embeddings)
     campaigns = CampaignStore(library.db)
     planning = CampaignPlanning(library, campaigns, planning_provider)
+    alignment = AlignmentTracking(campaigns.alignment, planning.provider)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -90,8 +92,10 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
             library.start()
             campaigns.initialize()
             planning.start()
+            alignment.start()
             yield
         finally:
+            await run_in_threadpool(alignment.close)
             await run_in_threadpool(planning.close)
             await run_in_threadpool(library.close)
             process_lock.release()
@@ -100,7 +104,8 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
     app.state.library = library
     app.state.campaigns = campaigns
     app.state.planning = planning
-    app.include_router(campaign_routes(library, campaigns, planning))
+    app.state.alignment = alignment
+    app.include_router(campaign_routes(library, campaigns, planning, alignment))
     app.add_middleware(UploadLimitMiddleware, max_bytes=settings.max_upload_bytes + 1024 * 1024)
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 

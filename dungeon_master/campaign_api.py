@@ -9,7 +9,7 @@ from .document_exports import json_document, markdown_document, pdf_document
 from .records import CharacterSheet, CreateCampaign, NpcMemory, StoryEvent, TurnUpdate
 
 
-def campaign_routes(library, store, planning):
+def campaign_routes(library, store, planning, alignment):
     router = APIRouter(prefix="/api/campaigns", tags=["Campaign documents"])
 
     def require(campaign_id):
@@ -50,6 +50,7 @@ def campaign_routes(library, store, planning):
             payload.dm_notes = campaign["character"]["dm_notes"]
         if not store.character(str(campaign_id), payload, expected_revision):
             raise HTTPException(409, "This character changed while you were editing. Reload the saved sheet before applying your changes.")
+        alignment.submit(str(campaign_id))
         return store.snapshot(str(campaign_id))
 
     @router.post("/{campaign_id}/events", status_code=201)
@@ -74,9 +75,16 @@ def campaign_routes(library, store, planning):
     def record_turn(campaign_id: uuid.UUID, payload: TurnUpdate):
         require(campaign_id)
         try:
-            return store.turn(str(campaign_id), payload)
+            result = store.turn(str(campaign_id), payload)
         except ValueError as exc:
             raise HTTPException(422, "Invalid character, NPC evidence, or campaign phase update; no changes were saved.") from exc
+        alignment.submit(str(campaign_id))
+        return result
+
+    @router.post("/{campaign_id}/alignment/retry", status_code=202)
+    def retry_alignment(campaign_id: uuid.UUID):
+        require(campaign_id)
+        return {"queued":alignment.submit(str(campaign_id), retry=True)}
 
     @router.post("/{campaign_id}/plan", status_code=202)
     def generate_plan(campaign_id: uuid.UUID):
@@ -100,7 +108,9 @@ def campaign_routes(library, store, planning):
             "Verify established facts against the source adventure; generated alternatives are proposals, not book canon. "
             "NPCs may use only their own recorded knowledge and witnessed events. "
             "Persist each resolved turn through /turns, including stats, NPC evidence, and phase updates. "
-            "Never reveal DM notes, hidden NPC motives, or future campaign phases to the player."
+            "Alignment is private descriptive background memory, never a player choice or a restriction on actions. "
+            "It is reviewed automatically at new level milestones from logged actions; do not set it in character updates. "
+            "Never reveal alignment or its reviews, DM notes, hidden NPC motives, or future campaign phases to the player."
         )
         return context
 

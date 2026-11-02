@@ -40,7 +40,7 @@ function renderCharacter() {
     <div class="record-group"><h3>Identity</h3><div class="form-grid three-columns">
       ${field("name", c.name, {label:"Character name"})}${field("player_name", c.player_name)}${field("pronouns", c.pronouns)}
       ${field("class_name", c.class_name, {label:"Class"})}${field("subclass", c.subclass)}${field("level", c.level, {type:"number", min:1, max:20})}
-      ${field("ancestry", c.ancestry)}${field("background", c.background)}${field("alignment", c.alignment)}
+      ${field("ancestry", c.ancestry)}${field("background", c.background)}
     </div></div>
     <div class="record-group"><h3>Ability scores</h3><div class="ability-grid">${abilities.map((ability) => `<label>${ability}<input name="ability-${ability}" type="number" min="1" max="30" required value="${c.abilities[ability]}"><small data-modifier="${ability}">${bonus(d.modifiers[ability])} modifier</small></label>`).join("")}</div></div>
     <div class="record-group"><h3>Combat &amp; resources</h3><div class="form-grid three-columns">
@@ -137,7 +137,7 @@ q("#character-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const button = event.submitter; button.disabled = true;
   try {
     const form = new FormData(event.target), sheet = {...current.character};
-    for (const key of ["name", "player_name", "pronouns", "class_name", "subclass", "ancestry", "background", "alignment", "hit_dice", ...textFields]) sheet[key] = String(form.get(key));
+    for (const key of ["name", "player_name", "pronouns", "class_name", "subclass", "ancestry", "background", "hit_dice", ...textFields]) sheet[key] = String(form.get(key));
     for (const key of ["level", "hp_current", "hp_max", "temp_hp", "armor_class", "speed", "proficiency_bonus", "experience", "death_save_successes", "death_save_failures"]) sheet[key] = Number(form.get(key));
     sheet.initiative_bonus = form.get("initiative_bonus") === "" ? null : Number(form.get("initiative_bonus"));
     sheet.abilities = Object.fromEntries(abilities.map((ability) => [ability, Number(form.get(`ability-${ability}`))]));

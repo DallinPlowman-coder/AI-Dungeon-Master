@@ -65,6 +65,16 @@ Character sheets, logs, and relationship records download as **PDF, Markdown, or
 
 This remains a local, single-user application. The DM/player split prevents accidental spoilers in normal views and exports; it is not an authentication boundary against the person who owns the local server. Do not expose this app as a shared service without adding authorization.
 
+### Private alignment memory
+
+Alignment is hidden from the character editor, player campaign state, and player PDF, Markdown, and JSON downloads. It is descriptive DM background memory, not a choice during character creation or a restriction on actions. Existing alignment values migrate into private memory.
+
+Reaching a new highest character level, through either a sheet save or an atomic turn, queues a local Ollama review. The review reads every newly logged event through that level-up, including the triggering turn. It scores only evidenced actions by the player character on order and care axes (-2 to +2), keeps a cumulative average, and derives the nine alignment tendencies at thresholds of ±0.5. Neutral or unclear axes score zero; no evidence preserves the previous tendency. New characters remain undetermined until there is evidence. This is this app's background mechanic, not a rulebook requirement.
+
+Ordinary actions and sheet edits do not change alignment between level-ups. Level decreases, repeat saves, and retried turns cannot rescore a milestone. Multiple pending milestones run in order; evidence added after a level-up waits for the next milestone. Reviews and their cited event IDs stay in DM context and explicit DM character exports. The AI must not reveal them during play. Only actual log events are reviewed, never campaign book proposals or character identity traits.
+
+Reviews persist across restarts. If Ollama is unavailable or returns invalid evidence, the level-up still saves and the previous tendency remains. Restarting the app retries unfinished reviews; `POST /api/campaigns/{id}/alignment/retry` also retries them after local model setup. A failed review blocks later reviews until it succeeds, preserving the action history.
+
 ### Local campaign planning with Ollama
 
 Install [Ollama](https://ollama.com/download) first (on macOS, `brew install ollama`). In one terminal, start it using the project's model directory, with cloud access disabled:
@@ -124,6 +134,7 @@ The UI's event form records manual story events through this same turn API. The 
 | PUT / GET | `/api/campaigns/{id}/npcs` / `npc-memories` | Save or inspect DM relationship memory |
 | POST | `/api/campaigns/{id}/turns` | Atomically record a resolved turn |
 | POST | `/api/campaigns/{id}/plan` | Queue a new outline; previous versions remain in history |
+| POST | `/api/campaigns/{id}/alignment/retry` | Retry unfinished private level-up reviews |
 | GET | `/api/campaigns/{id}/dm-context` | Private context to review before the next scene |
 | GET | `/api/campaigns/{id}/documents/{kind}.{format}` | Download `character`, `log`, or `relationships` as `pdf`, `md`, or `json` |
 | GET | `/api/campaigns/{id}/documents/plan.pdf?audience=dm` | Explicit spoiler-containing DM plan export |

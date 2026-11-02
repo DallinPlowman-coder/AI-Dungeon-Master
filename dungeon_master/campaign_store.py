@@ -2,12 +2,14 @@ import json
 import uuid
 
 from .database import now
+from .alignment import AlignmentMemory
 from .records import CharacterSheet, NpcMemory, TurnUpdate
 
 
 class CampaignStore:
     def __init__(self, database):
         self.db = database
+        self.alignment = AlignmentMemory(database)
 
     def initialize(self):
         with self.db.connect() as db:
@@ -47,6 +49,7 @@ class CampaignStore:
             """)
             if "character_revision" not in {row["name"] for row in db.execute("PRAGMA table_info(campaigns)")}:
                 db.execute("ALTER TABLE campaigns ADD COLUMN character_revision INTEGER NOT NULL DEFAULT 0")
+            self.alignment.initialize(db)
 
     @staticmethod
     def decode(row):
@@ -73,13 +76,19 @@ class CampaignStore:
                 character_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (campaign_id, name, book["id"], book["title"], book["sha256"],
                  CharacterSheet().model_dump_json(), stamp, stamp))
+            self.alignment.create(db, campaign_id, 1)
         return campaign_id
 
     def character(self, campaign_id, sheet, expected_revision=None):
         with self.db.connect() as db:
-            return db.execute("""UPDATE campaigns SET character_json = ?, character_revision = character_revision + 1,
+            db.execute("BEGIN IMMEDIATE")
+            previous = db.execute("SELECT character_json FROM campaigns WHERE id = ?", (campaign_id,)).fetchone()
+            saved = db.execute("""UPDATE campaigns SET character_json = ?, character_revision = character_revision + 1,
                 updated_at = ? WHERE id = ? AND (? IS NULL OR character_revision = ?)""",
                 (sheet.model_dump_json(), now(), campaign_id, expected_revision, expected_revision)).rowcount == 1
+            if saved:
+                self.alignment.queue(db, campaign_id, json.loads(previous["character_json"])["level"], sheet)
+            return saved
 
     def events(self, campaign_id, player=False):
         with self.db.connect() as db:
@@ -184,6 +193,7 @@ class CampaignStore:
             db.execute("""UPDATE campaigns SET character_json = ?, plan_json = ?, updated_at = ?,
                 character_revision = character_revision + ? WHERE id = ?""",
                 (sheet.model_dump_json(), json.dumps(plan) if plan else None, now(), int(bool(update.character_changes)), campaign_id))
+            self.alignment.queue(db, campaign_id, json.loads(row["character_json"])["level"], sheet)
             return {"event_id":event_id, "duplicate":False}
 
     def planning(self, campaign_id, **values):
@@ -221,6 +231,8 @@ class CampaignStore:
         campaign["events"] = self.events(campaign_id, player=not dm)
         campaign["npcs"] = self.npcs(campaign_id, player=not dm)
         campaign["derived"] = CharacterSheet.model_validate(campaign["character"]).derived()
+        if dm:
+            campaign["alignment"] = self.alignment.context(campaign_id)
         if not dm:
             campaign["character"].pop("dm_notes", None)
             campaign.pop("plan", None)
