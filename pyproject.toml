@@ -18,10 +18,12 @@ dependencies = [
   "beautifulsoup4>=4.13,<5",
   "defusedxml>=0.7,<1",
   "filelock>=3.10,<5",
+  "httpx>=0.28,<1",
+  "reportlab>=4.4,<5",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "httpx>=0.28,<1"]
+dev = ["pytest>=8,<10"]
 
 [tool.setuptools.packages.find]
 include = ["dungeon_master*"]

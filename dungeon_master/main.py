@@ -18,6 +18,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import Settings
 from .database import ACTIVE_STATUSES
 from .library import Library
+from .campaign_store import CampaignStore
+from .campaign_api import campaign_routes
+from .planning import CampaignPlanning
 
 
 STATIC = Path(__file__).parent / "static"
@@ -69,9 +72,11 @@ class MoveBookRequest(BaseModel):
     collection: BookCollection
 
 
-def create_app(settings: Settings | None = None, embeddings=None):
+def create_app(settings: Settings | None = None, embeddings=None, planning_provider=None):
     settings = settings or Settings.from_env()
     library = Library(settings, embeddings)
+    campaigns = CampaignStore(library.db)
+    planning = CampaignPlanning(library, campaigns, planning_provider)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -83,13 +88,19 @@ def create_app(settings: Settings | None = None, embeddings=None):
             raise RuntimeError("This library is already open. Run one server worker per data directory.") from exc
         try:
             library.start()
+            campaigns.initialize()
+            planning.start()
             yield
         finally:
+            await run_in_threadpool(planning.close)
             await run_in_threadpool(library.close)
             process_lock.release()
 
     app = FastAPI(title="AI Dungeon Master · Book Library", version="0.1.0", lifespan=lifespan)
     app.state.library = library
+    app.state.campaigns = campaigns
+    app.state.planning = planning
+    app.include_router(campaign_routes(library, campaigns, planning))
     app.add_middleware(UploadLimitMiddleware, max_bytes=settings.max_upload_bytes + 1024 * 1024)
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -97,11 +108,13 @@ def create_app(settings: Settings | None = None, embeddings=None):
     async def local_app_headers(request: Request, call_next):
         # Browser writes must originate from this app. Local API clients need no Origin header.
         origin = request.headers.get("origin")
-        if request.method in {"POST", "PATCH", "DELETE"} and origin and origin != str(request.base_url).rstrip("/"):
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and origin and origin != str(request.base_url).rstrip("/"):
             return JSONResponse({"detail": "Cross-origin requests are not allowed."}, status_code=403)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
+        if request.url.path.startswith("/api/campaigns"):
+            response.headers["Cache-Control"] = "no-store"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
             "img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
@@ -117,6 +130,10 @@ def create_app(settings: Settings | None = None, embeddings=None):
     @app.get("/", include_in_schema=False)
     def index():
         return FileResponse(STATIC / "index.html")
+
+    @app.get("/campaigns", include_in_schema=False)
+    def campaign_workspace():
+        return FileResponse(STATIC / "campaigns.html")
 
     @app.get("/api/health")
     def health():

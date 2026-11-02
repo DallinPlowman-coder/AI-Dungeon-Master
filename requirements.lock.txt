@@ -35,6 +35,7 @@ pypdf==6.21.4
 pytest==9.2.0
 python-multipart==0.0.33
 PyYAML==6.0.3
+reportlab==4.5.1
 requests==2.34.2
 soupsieve==3.0.4
 starlette==1.10.0

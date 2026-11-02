@@ -15,6 +15,8 @@ class Settings:
     max_chunks: int = 30_000
     chunk_tokens: int = 360
     overlap_characters: int = 180
+    ollama_url: str = "http://127.0.0.1:11434"
+    planning_model: str = "qwen3:4b"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -22,6 +24,8 @@ class Settings:
             data_dir=Path(os.getenv("DM_DATA_DIR", "data")).resolve(),
             embedding_model=os.getenv("DM_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"),
             max_upload_mb=max(1, int(os.getenv("DM_MAX_UPLOAD_MB", "100"))),
+            ollama_url=os.getenv("DM_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/"),
+            planning_model=os.getenv("DM_PLANNING_MODEL", "qwen3:4b"),
         )
 
     @property
