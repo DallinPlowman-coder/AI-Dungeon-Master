@@ -114,7 +114,7 @@ class CharacterSheet(Record):
 class StoryEvent(Record):
     title: Annotated[str, Field(min_length=1, max_length=200)]
     summary: Annotated[str, Field(min_length=1, max_length=12000)]
-    kind: Literal["story", "decision", "discovery", "combat", "loot", "rest", "note"] = "story"
+    kind: Literal["story", "decision", "discovery", "combat", "loot", "rest", "note", "roll"] = "story"
     session: int = Field(1, ge=1, le=100000)
     world_time: Name = ""
     details: Text = ""
@@ -147,12 +147,24 @@ class PhaseUpdate(Record):
     status: Literal["planned", "active", "completed", "skipped"]
 
 
+class RollRequest(Record):
+    label: Annotated[str, Field(min_length=1, max_length=120)]
+    reason: Annotated[str, Field(max_length=1200)] = ""
+    modifier: int = Field(0, ge=-30, le=30, strict=True)
+    idempotency_key: UUID = Field(default_factory=uuid4)
+
+
+class RollPress(Record):
+    """A button press supplies no die value or modifier."""
+
+
 class TurnUpdate(Record):
     event: StoryEvent
     idempotency_key: UUID = Field(default_factory=uuid4)
     character_changes: dict = Field(default_factory=dict)
     npc_updates: list[NpcMemory] = Field(default_factory=list, max_length=50)
     phase_updates: list[PhaseUpdate] = Field(default_factory=list, max_length=50)
+    roll_requests: list[RollRequest] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
     def one_current_phase(self):

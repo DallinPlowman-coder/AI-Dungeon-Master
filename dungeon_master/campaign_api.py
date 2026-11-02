@@ -6,7 +6,8 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from .document_exports import json_document, markdown_document, pdf_document
-from .records import CharacterSheet, CreateCampaign, NpcMemory, StoryEvent, TurnUpdate
+from .dice import RollConflict, RollNotFound
+from .records import CharacterSheet, CreateCampaign, NpcMemory, RollPress, RollRequest, StoryEvent, TurnUpdate
 
 
 def campaign_routes(library, store, planning, alignment):
@@ -77,7 +78,7 @@ def campaign_routes(library, store, planning, alignment):
         try:
             result = store.turn(str(campaign_id), payload)
         except ValueError as exc:
-            raise HTTPException(422, "Invalid character, NPC evidence, or campaign phase update; no changes were saved.") from exc
+            raise HTTPException(422, "Invalid character, NPC evidence, campaign phase, or roll request; no changes were saved.") from exc
         alignment.submit(str(campaign_id))
         return result
 
@@ -85,6 +86,22 @@ def campaign_routes(library, store, planning, alignment):
     def retry_alignment(campaign_id: uuid.UUID):
         require(campaign_id)
         return {"queued":alignment.submit(str(campaign_id), retry=True)}
+
+    @router.post("/{campaign_id}/rolls", status_code=201)
+    def request_roll(campaign_id: uuid.UUID, payload: RollRequest):
+        require(campaign_id)
+        try:
+            return store.dice.request(str(campaign_id), payload)
+        except RollConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @router.post("/{campaign_id}/rolls/{roll_id}/roll")
+    def press_roll(campaign_id: uuid.UUID, roll_id: uuid.UUID, payload: RollPress | None = None):
+        require(campaign_id)
+        try:
+            return store.dice.roll(str(campaign_id), str(roll_id))
+        except RollNotFound as exc:
+            raise HTTPException(404, str(exc)) from exc
 
     @router.post("/{campaign_id}/plan", status_code=202)
     def generate_plan(campaign_id: uuid.UUID):
@@ -108,6 +125,10 @@ def campaign_routes(library, store, planning, alignment):
             "Verify established facts against the source adventure; generated alternatives are proposals, not book canon. "
             "NPCs may use only their own recorded knowledge and witnessed events. "
             "Persist each resolved turn through /turns, including stats, NPC evidence, and phase updates. "
+            "When a player d20 roll is needed, add roll_requests with a public label, public reason, and modifier. "
+            "Pause that action until the player presses its roll button; never invent or submit dice values. "
+            "Use the matching stored roll result to continue, and do not treat an unrelated free roll as that check. "
+            "A raw 1 or 20 is not by itself an instruction to change stats or decide an outcome. "
             "Alignment is private descriptive background memory, never a player choice or a restriction on actions. "
             "It is reviewed automatically at new level milestones from logged actions; do not set it in character updates. "
             "Never reveal alignment or its reviews, DM notes, hidden NPC motives, or future campaign phases to the player."

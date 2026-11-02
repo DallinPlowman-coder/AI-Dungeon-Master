@@ -69,6 +69,27 @@ Character sheets, logs, and relationship records download as **PDF, Markdown, or
 
 This remains a local, single-user application. The DM/player split prevents accidental spoilers in normal views and exports; it is not an authentication boundary against the person who owns the local server. Do not expose this app as a shared service without adding authorization.
 
+### Player d20 rolls
+
+Every requested player roll appears at the table with its reason, `1d20` formula, modifier, and a **Roll d20** button. The die animates on screen only after the player presses it, then shows the raw face and total. Results remain in the campaign log and downloads; **View roll** reopens a saved result. Reduced-motion preferences disable the tumble animation.
+
+The **Roll d20** shortcut handles the next pending check, or makes a free roll if none is waiting. **Campaign docs → Campaign log → Request a player d20 roll** can queue a check manually. Live AI conversation remains a future milestone; its turn contract can already queue these same buttons:
+
+```json
+{
+  "event": {"title": "The narrow bridge", "summary": "A rope bridge crosses the chasm."},
+  "roll_requests": [{
+    "label": "Dexterity check",
+    "reason": "Keep your balance while crossing the narrow bridge.",
+    "modifier": 3
+  }]
+}
+```
+
+Submit that to `POST /api/campaigns/{id}/turns`. Requests commit atomically with the scene. Labels and reasons are public, so keep hidden information out of them. The future DM must wait for the matching stored result before resolving that action. It must not invent a dice value or substitute an unrelated free roll.
+
+`POST /api/campaigns/{id}/rolls` also queues a request; reuse its `idempotency_key` when retrying creation. `POST /api/campaigns/{id}/rolls/{roll_id}/roll` accepts an empty body and generates an unbiased integer from 1 to 20 with Python's local `secrets` generator. The modifier is fixed when requested. Roll resolution and its log event commit together; repeat or concurrent presses return that same saved result. Pending checks and completed results survive restarts. Rolls do not automatically change HP or adjudicate success, failure, or critical outcomes.
+
 ### Private alignment memory
 
 Alignment is hidden from the character editor, player campaign state, and player PDF, Markdown, and JSON downloads. It is descriptive DM background memory, not a choice during character creation or a restriction on actions. Existing alignment values migrate into private memory.
@@ -137,6 +158,8 @@ The UI's event form records manual story events through this same turn API. The 
 | POST | `/api/campaigns/{id}/events` | Append a standalone event |
 | PUT / GET | `/api/campaigns/{id}/npcs` / `npc-memories` | Save or inspect DM relationship memory |
 | POST | `/api/campaigns/{id}/turns` | Atomically record a resolved turn |
+| POST | `/api/campaigns/{id}/rolls` | Request a player d20 button without rolling |
+| POST | `/api/campaigns/{id}/rolls/{roll_id}/roll` | Press once to roll; retries return the saved result |
 | POST | `/api/campaigns/{id}/plan` | Queue a new outline; previous versions remain in history |
 | POST | `/api/campaigns/{id}/alignment/retry` | Retry unfinished private level-up reviews |
 | GET | `/api/campaigns/{id}/dm-context` | Private context to review before the next scene |

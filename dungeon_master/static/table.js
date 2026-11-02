@@ -76,12 +76,13 @@ function renderTable() {
     loadTableImages(current.id);
   }
   renderTableCharacter();
+  if (typeof renderDice === "function") renderDice();
   const key = current.events.map((event) => event.id).join(",");
   if (key === tableFeedKey) return;
   const feed = q("#story-feed"), follow = tableFeedKey === null || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
   const scroll = feed.scrollTop;
   tableFeedKey = key;
-  feed.innerHTML = current.events.length ? current.events.map((event) => `<article class="story-entry"><span class="story-entry-mark" aria-hidden="true">✧</span><div><div class="story-entry-meta"><span>Session ${event.session}</span><span aria-hidden="true">·</span><span>${esc(event.kind)}</span>${event.world_time ? `<span aria-hidden="true">·</span><span>${esc(event.world_time)}</span>` : ""}</div><h2>${esc(event.title)}</h2><p>${esc(event.summary)}</p>${event.details ? `<details><summary>Read the full scene</summary><p>${esc(event.details)}</p></details>` : ""}</div></article>`).join("") : '<div class="story-empty"><span aria-hidden="true">✧</span><h2>Every story begins somewhere.</h2><p>Your recorded scenes and choices will appear here. Write the first entry below, or open your campaign docs.</p></div>';
+  feed.innerHTML = current.events.length ? current.events.map((event) => `<article class="story-entry"><span class="story-entry-mark" aria-hidden="true">✧</span><div><div class="story-entry-meta"><span>Session ${event.session}</span><span aria-hidden="true">·</span><span>${esc(event.kind)}</span>${event.world_time ? `<span aria-hidden="true">·</span><span>${esc(event.world_time)}</span>` : ""}</div><h2>${esc(event.title)}</h2><p>${esc(event.summary)}</p>${typeof renderDiceEvent === "function" ? renderDiceEvent(event) : ""}${event.details ? `<details><summary>Read the full scene</summary><p>${esc(event.details)}</p></details>` : ""}</div></article>`).join("") : '<div class="story-empty"><span aria-hidden="true">✧</span><h2>Every story begins somewhere.</h2><p>Your recorded scenes and choices will appear here. Write the first entry below, or open your campaign docs.</p></div>';
   feed.scrollTop = follow ? feed.scrollHeight : scroll;
 }
 q("#battle-map").addEventListener("toggle", () => {

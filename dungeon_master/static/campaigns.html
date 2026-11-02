@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/campaigns.css">
   <script src="/static/campaigns.js" defer></script>
   <script src="/static/table.js" defer></script>
+  <script src="/static/dice.js" defer></script>
 </head>
 <body class="tabletop-page">
   <main class="table-main">
@@ -35,8 +36,9 @@
               </div>
             </details>
             <section class="story-stage" aria-labelledby="story-heading">
-              <div class="story-toolbar"><div><span class="section-index">YOUR ADVENTURE</span><h1 id="story-heading">The story so far<span>.</span></h1></div><span class="story-mode"><span class="dot" aria-hidden="true"></span> Campaign journal</span></div>
+              <div class="story-toolbar"><div><span class="section-index">YOUR ADVENTURE</span><h1 id="story-heading">The story so far<span>.</span></h1></div><div class="story-actions"><button type="button" id="quick-d20" class="quick-d20" title="Roll a d20"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="m15 1 13 8v14l-13 8L2 23V9Zm0 0L9 12l6 19 6-19L2 9l13 22L28 9 9 12l12 0L2 23h26L15 1"/></svg><span>Roll d20</span></button><span class="story-mode"><span class="dot" aria-hidden="true"></span> Campaign journal</span></div></div>
               <div class="story-feed" id="story-feed" role="region" aria-label="Recorded story" tabindex="0"></div>
+              <div id="roll-prompts" class="roll-prompts" role="region" aria-label="Requested player rolls" hidden></div>
               <form id="table-entry-form" class="table-composer"><label for="table-entry" class="sr-only">Write a campaign journal entry</label><div class="composer-box"><textarea id="table-entry" name="summary" rows="2" maxlength="12000" required placeholder="Write your next chapter…"></textarea><button class="composer-send" type="submit" aria-label="Save journal entry"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7M12 5v15"/></svg></button></div><div class="composer-caption"><span>Journal mode <span aria-hidden="true">·</span> Entries save to your campaign log.</span><span>Ctrl / ⌘ + Enter to save</span></div></form>
             </section>
           </section>
@@ -65,6 +67,14 @@
         <section id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" hidden><div class="document-heading"><div><span class="section-index">04 / THE DM'S ROADMAP</span><h2>Campaign plan</h2><p>The full adventure arc, branches, and milestones for choosing what comes next.</p></div></div><div id="dm-gate" class="record-panel spoiler-gate"><span class="collection-emblem" aria-hidden="true">◇</span><h3>DM workspace · future story spoilers</h3><p>This plan is kept separate from player records. Opening it reveals hidden scenes, motives, and possible endings.</p><button id="reveal-dm" class="secondary-button">Reveal DM workspace</button></div><div id="dm-workspace" hidden><div class="dm-toolbar"><span class="small-tag">DM ONLY · SPOILERS</span><div class="download-links" data-document="plan"></div><button id="retry-plan" class="secondary-button">Generate a new plan</button></div><div id="plan-status" class="record-panel" role="status"></div><div id="plan-content"></div><details class="record-panel"><summary>Private character notes</summary><form id="dm-character-form" class="record-form"><label>Details known only to the DM<textarea name="dm_notes" id="dm-character-notes" maxlength="12000" rows="4"></textarea></label><button type="submit" class="secondary-button">Save private notes</button></form></details><details class="record-panel"><summary>Full DM context · includes hidden log entries</summary><p class="muted form-help">The AI reviews this saved state before the next scene. The plan describes possibilities; the log records actual events.</p><pre id="dm-context-preview" class="context-preview"></pre><a id="dm-context-download" class="secondary-button" download>Download DM context (JSON)</a></details></div></section>
         </dialog>
       </div>
+      <dialog id="dice-dialog" class="dice-dialog" aria-labelledby="dice-title">
+        <div class="dice-dialog-top"><span class="section-index">THE DICE HAVE A SAY</span><button type="button" id="close-dice" class="icon-button" aria-label="Close dice result">×</button></div>
+        <h2 id="dice-title">Roll a d20</h2><p id="dice-reason" class="dice-reason"></p>
+        <div id="dice-stage" class="dice-stage" aria-hidden="true"><div class="die-body"><svg viewBox="0 0 200 220"><defs><linearGradient id="die-face-color" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#785169"/><stop offset=".5" stop-color="#4b2d42"/><stop offset="1" stop-color="#2e1e2c"/></linearGradient></defs><path class="die-solid" d="m100 10 83 48v101l-83 49-83-49V58Z"/><path class="die-facets" d="m100 10-43 72 43 126 43-126L17 58l83 150 83-150L57 82h86L17 159h166L100 10"/><path class="die-center" d="m57 82 86 0-43 77Z"/></svg><span id="dice-face">?</span></div></div>
+        <div id="dice-result" class="dice-result" role="status" aria-live="polite" aria-atomic="true">Ready to roll.</div>
+        <p id="dice-calculation" class="dice-calculation"></p><p id="dice-error" class="dice-error" role="alert" hidden></p>
+        <div class="dice-actions"><button type="button" id="retry-dice" class="primary-button" hidden>Retry this roll</button><button type="button" id="done-dice" class="secondary-button">Back to adventure</button></div>
+      </dialog>
       <dialog id="map-dialog" class="map-dialog" aria-labelledby="map-dialog-title"><div class="map-dialog-heading"><h2 id="map-dialog-title">Battle map</h2><button type="button" id="close-map" class="icon-button" aria-label="Close expanded map">×</button></div><img id="expanded-map-image" alt="Expanded campaign battle map"></dialog>
     </div>
   </main>

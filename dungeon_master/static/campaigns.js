@@ -249,7 +249,7 @@ async function poll() {
       if (next && next.updated_at !== current.updated_at) await loadCampaign(current.id);
     }
   } catch (error) { announce(`Campaign refresh failed. ${error.message}`, true); }
-  finally { polling = false; setTimeout(poll, ["queued", "reading", "synthesizing"].includes(current?.plan_status) ? 2000 : 7000); }
+  finally { polling = false; setTimeout(poll, ["queued", "reading", "synthesizing"].includes(current?.plan_status) || current?.rolls?.some((roll) => roll.status === "pending") ? 2000 : 7000); }
 }
 (async () => {
   try { const campaigns = await refreshCampaignList(); if (campaigns.length) await loadCampaign(q("#active-campaign").value, true); else await showCreate(); }
