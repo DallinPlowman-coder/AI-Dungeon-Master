@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141715">
+  <meta name="description" content="Build your AI Dungeon Master's knowledge library from your books.">
+  <title>The Archive · AI Dungeon Master</title>
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a href="/" class="brand"><img src="/static/mark.svg" width="40" height="40" alt=""><span>DUNGEON<br><b>MASTER</b></span></a>
+    <div class="workspace-label">YOUR WORKSPACE</div>
+    <nav aria-label="Main navigation">
+      <a class="nav-link selected" href="/" aria-current="page"><span aria-hidden="true">▤</span> Book library <span class="nav-count" id="nav-count">0</span></a>
+      <a class="nav-link" href="/docs" target="_blank" rel="noopener"><span aria-hidden="true">⌘</span> API reference <span class="external" aria-hidden="true">↗</span></a>
+    </nav>
+    <div class="sidebar-note"><span class="tiny-star" aria-hidden="true">✧</span><p>Every great adventure<br>begins with a little lore.</p></div>
+    <div class="local-status"><span class="dot"></span><div>Local library<small>Your books stay on this device</small></div></div>
+  </aside>
+  <main>
+    <header class="topbar"><span>Workspace <span class="slash">/</span> <strong>Book library</strong></span><span class="version">FOUNDATION / 01</span></header>
+    <div class="content">
+      <div class="page-intro"><div><div class="eyebrow">KNOWLEDGE BEFORE ADVENTURE</div><h1>The Archive<span>.</span></h1><p>Give your Dungeon Master a world to draw from.</p></div><div class="archive-seal" aria-hidden="true">✦</div></div>
+      <div class="banner" id="notice" role="status" hidden></div>
+      <section class="intake" aria-labelledby="upload-title">
+        <div class="intake-intro"><span class="section-index">01 / BUILD YOUR LIBRARY</span><h2 id="upload-title">A book becomes<br>a thousand possibilities.</h2><p>Add rulebooks, adventures, or your own world notes. We’ll turn their text into a searchable library for your future AI DM.</p><div class="pipeline"><span>Extract text</span><i>→</i><span>Create passages</span><i>→</i><span>Index</span></div></div>
+        <div class="upload-area">
+          <label class="dropzone" id="dropzone" for="book-input"><span class="upload-symbol" aria-hidden="true">↥</span><strong>Drop a book into the archive</strong><span>or <span class="text-link">browse your files</span></span><small id="upload-types">PDF, EPUB, TXT, MD · up to 100 MB each</small><input id="book-input" type="file" accept=".pdf,.epub,.txt,.md" multiple></label>
+          <div class="upload-progress" id="upload-progress" hidden><div><span id="upload-message">Uploading…</span><span id="upload-percent"></span></div><progress id="upload-meter" max="100" value="0" aria-label="File upload progress"></progress></div>
+          <div class="upload-footnote"><span>Text-based books only. Scans need OCR first.</span><button class="text-button" id="sample-button">Try a sample ↗</button></div>
+        </div>
+      </section>
+      <section class="library-section" aria-labelledby="library-title"><div class="section-heading"><div><span class="section-index">02 / YOUR SOURCES</span><h2 id="library-title">Book library <span class="count" id="book-count">0</span></h2></div><span id="library-summary" class="muted">Ready for your first book</span></div>
+        <div id="library-list" class="library-list" aria-live="polite"><div class="empty-state"><span class="empty-book" aria-hidden="true">▤</span><h3>The shelves are waiting.</h3><p>Upload your first book to start building your world.</p></div></div>
+      </section>
+      <section class="retrieval-section" aria-labelledby="search-title"><div class="section-heading"><div><span class="section-index">03 / EXPLORE THE KNOWLEDGE</span><h2 id="search-title">Find a passage</h2></div><span class="small-tag">SOURCE SEARCH</span></div><p class="search-description">Try a rule, a place, or a story idea. See the passages your DM could draw from, with their sources.</p>
+        <form id="search-form"><div class="search-controls"><label class="sr-only" for="search-query">Question or search terms</label><input id="search-query" placeholder="What lurks in the ruins beneath the old city?" minlength="2" maxlength="2000" required><label class="sr-only" for="search-book">Search in book</label><select id="search-book"><option value="">All ready books</option></select><button type="submit" class="primary-button" id="search-button" disabled>Search archive <span aria-hidden="true">↗</span></button></div></form>
+        <div class="search-status muted" id="search-status" role="status">Your books will be searchable once indexing is complete.</div>
+        <div id="search-results"></div><div class="context-actions" id="context-actions" hidden><span class="muted">Retrieved excerpts, ready for the future DM.</span><button id="copy-context" class="secondary-button">Copy source context</button></div>
+      </section>
+      <footer><span>AI DUNGEON MASTER</span><span>The library is the beginning. The adventure comes next.</span><a href="https://github.com/DallinPlowman-coder/AI-Dungeon-Master" target="_blank" rel="noopener">Project ↗</a></footer>
+    </div>
+  </main>
+  <dialog id="passage-dialog"><div class="dialog-top"><div><div class="eyebrow">INSIDE THE BOOK</div><h2 id="passage-title">Passages</h2></div><button class="icon-button" id="close-passages" aria-label="Close passages">×</button></div><div id="passage-list"></div><div class="pagination"><button class="secondary-button" id="previous-passages">← Previous</button><span id="passage-range" class="muted"></span><button class="secondary-button" id="next-passages">Next →</button></div></dialog>
+</body>
+</html>
