@@ -348,6 +348,70 @@ h1 span {
 .library-section {
   margin-top:37px;
 }
+.collection-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:start;
+  gap:22px;
+}
+.collection-card {
+  min-width:0;
+  padding:24px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--surface2),var(--surface));
+  scroll-margin-top:20px;
+}
+.collection-emblem {
+  color:var(--gold);
+  font:32px Georgia,serif;
+}
+.collection-description {
+  min-height:66px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.8;
+  margin-bottom:20px;
+}
+.collection-card .dropzone {
+  min-height:176px;
+  padding:18px 10px;
+}
+.collection-sources {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  margin:25px 0 12px;
+  font-size:10px;
+}
+.collection-sources h3 {
+  font-size:11px;
+  font-weight:500;
+}
+.collection-card .book-row {
+  grid-template-columns:30px minmax(0,1fr);
+  padding:17px 13px;
+  gap:10px;
+}
+.collection-card .book-cover {
+  width:29px;
+  height:42px;
+}
+.collection-card .book-progress,.collection-card .book-actions {
+  grid-column:2/-1;
+}
+.collection-card .book-actions {
+  justify-content:flex-start;
+}
+.collection-card .empty-state {
+  min-height:140px;
+  padding:20px 12px;
+}
+.collection-card .empty-state h3 {
+  font-size:16px;
+}
 .count {
   display:inline-block;
   vertical-align:middle;
@@ -820,6 +884,16 @@ dialog::backdrop {
   }
 }
 @media(max-width:610px) {
+  .collection-grid {
+    grid-template-columns:1fr;
+    gap:18px;
+  }
+  .collection-card {
+    padding:22px 18px;
+  }
+  .collection-description {
+    min-height:0;
+  }
   .content {
     padding:29px 18px 0;
   }

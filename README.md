@@ -13,7 +13,18 @@ python -m pip install -e '.[dev]'
 python -m dungeon_master
 ```
 
-Open **http://127.0.0.1:8000**. Upload a book or click **Try a sample**, wait for **Ready for retrieval**, then use **Find a passage** to verify the index. **View passages** shows the extracted text and its source location.
+Open **http://127.0.0.1:8000**. Upload a book to **Rules** or **Campaigns**, or try a sample in either area. Wait for **Ready for retrieval**, then use **Find a passage** to verify the index. **View passages** shows the extracted text and its source location.
+
+## Two source collections
+
+- **Rules:** rulebooks, combat and spell references, character options, and house rules.
+- **Campaigns:** adventure books, settings, locations, NPCs, and campaign notes.
+
+Each collection has its own upload area, book list, indexing progress, and retrieval scope. Search **Rules only**, **Campaigns only**, or **Rules + Campaigns**; optionally narrow further to one book. Both semantic and keyword retrieval apply the selected collection before ranking. Returned passages and context identify the collection alongside the source citation.
+
+Duplicate detection is per collection: the same file can be indexed in both collections, while repeated uploads within one collection reuse the existing book. Use **Move to Rules / Campaigns** to change a finished book's collection without regenerating its embeddings. If the destination already contains that file, the move is rejected and both existing entries are preserved.
+
+Existing libraries upgrade automatically. Earlier uploads are placed under Campaigns and keep their original IDs, passages, vectors, and source files. Move any rulebooks into Rules as needed. The pre-upgrade database is backed up to `data/library.before-collections.sqlite3` before the transactional migration.
 
 The first upload downloads the English `BAAI/bge-small-en-v1.5` embedding model, approximately 70 MB, from Hugging Face. Subsequent processing uses the cached model. Book contents and queries are processed locally. You can download the model ahead of time:
 
@@ -30,7 +41,7 @@ python -m pip install --no-deps -e .
 
 ## What “ragified” means here
 
-1. **Store:** validate the upload and save the original file with a generated filename. SHA-256 deduplicates identical uploads, including files renamed by the user.
+1. **Store:** validate the upload, save its Rules/Campaigns collection, and store the original file with a generated filename. SHA-256 deduplicates identical uploads within the selected collection, including files renamed by the user.
 2. **Extract:** read PDF pages, EPUB sections in spine order, or UTF-8 / BOM-marked UTF-16 text. PDF citations use physical, one-based PDF page numbers, which may differ from printed page numbers.
 3. **Chunk:** normalize text and split it into overlapping passages, bounded by the source page or section. Each passage fits within 360 tokens of the actual embedding tokenizer. Paragraph and sentence boundaries are preferred; short chunks use proportionally smaller overlaps.
 4. **Embed:** generate normalized, 384-dimensional vectors locally with FastEmbed / ONNX on the CPU.
@@ -86,25 +97,28 @@ Interactive documentation: **http://127.0.0.1:8000/docs**.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/health` | Read limits, format support, and model name |
-| POST | `/api/books` | Multipart upload, field `file`; 202 queued, 200 duplicate |
-| GET | `/api/books` | List books and processing status |
+| POST | `/api/books` | Multipart fields `file` and `collection` (`rules` or `campaign`); 202 queued, 200 duplicate |
+| GET | `/api/books?collection=rules` | List books in one collection; omit filter for all books |
 | GET | `/api/books/{id}` | Poll a book's progress / failure details |
+| PATCH | `/api/books/{id}` | Move a finished book using `{"collection":"rules"}` or `{"collection":"campaign"}` |
 | GET | `/api/books/{id}/chunks?offset=0&limit=10` | Preview source passages |
 | POST | `/api/books/{id}/reindex` | Retry a failed book or rebuild its index |
 | DELETE | `/api/books/{id}` | Remove a finished/failed book and its index |
 | POST | `/api/retrieve` | Search ready books and return source context |
 
 ```sh
-curl -F 'file=@/path/to/book.pdf' http://127.0.0.1:8000/api/books
+curl -F 'file=@/path/to/rulebook.pdf' -F 'collection=rules' http://127.0.0.1:8000/api/books
+
+curl -F 'file=@/path/to/adventure.pdf' -F 'collection=campaign' http://127.0.0.1:8000/api/books
 
 curl http://127.0.0.1:8000/api/books
 
 curl http://127.0.0.1:8000/api/retrieve \
   -H 'Content-Type: application/json' \
-  -d '{"query":"How can someone cure the sick traveler?","limit":5}'
+  -d '{"query":"How can someone cure the sick traveler?","collection":"campaign","limit":5}'
 ```
 
-Add `"book_id":"<UUID returned by upload>"` to scope retrieval to one book. Each result includes `citation`, `book_id`, `chunk_id`, `title`, `source_label`, `text`, `score`, and cosine `similarity`. The top-level `context` contains those excerpts labeled `[S1]`, `[S2]`, and so on. These are reference passages to pass to a future generation model; the service does not generate an answer.
+Set `"collection":"rules"` or `"collection":"campaign"` to scope retrieval; omit it or use `null` to search both. Add `"book_id":"<UUID returned by upload>"` to scope retrieval to one book. If both filters are supplied, the book must belong to the selected collection. Uploads without a collection default to `campaign` for compatibility with earlier clients. Each result includes `citation`, `book_id`, `chunk_id`, `collection`, `title`, `source_label`, `text`, `score`, and cosine `similarity`. The top-level `context` contains those excerpts labeled `[S1]`, `[S2]`, and so on. These are reference passages to pass to a future generation model; the service does not generate an answer.
 
 ## Verification
 
@@ -116,4 +130,4 @@ python -m pytest -q
 DM_TEST_MODEL=1 python -m pytest tests/test_real_model.py -q
 ```
 
-The offline tests cover PDF / EPUB extraction and ordering, unreadable/encrypted PDFs, token limits and source boundaries, duplicate detection, input and size validation, scoped retrieval, atomic reindexing, restart recovery, changed model handling, and deletion of file/vector/full-text data. The opt-in test verifies real 384-dimensional embeddings and finds a medicine passage using a paraphrased query.
+The offline tests cover PDF / EPUB extraction and ordering, unreadable/encrypted PDFs, token limits and source boundaries, per-collection duplicate detection, isolated semantic and keyword retrieval, combined search, collection moves and collisions, legacy database migration, input and size validation, atomic reindexing, restart recovery, changed model handling, and deletion of file/vector/full-text data. The opt-in test verifies real 384-dimensional embeddings and finds a medicine passage using a paraphrased query within the selected collection.

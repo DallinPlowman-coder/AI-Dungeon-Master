@@ -1,0 +1,11 @@
+ARCHIVE TEST RULES
+Original demonstration material for testing the Rules library. This is not an official Dungeons & Dragons rulebook.
+
+LANTERN WARD
+A character carrying a lit ward lantern may spend one ember to protect an ally from a shadow creature. The ally ignores the next point of shadow damage. The ward lasts until the lantern goes out or the scene ends.
+
+RESTING AT A WAYSHRINE
+After a quiet hour at a wayshrine, each traveler regains two embers. A character can benefit from a particular wayshrine only once per day. A hostile creature entering the shrine interrupts the rest.
+
+EXPLORING IN DARKNESS
+Travelers without a light source must move slowly in the underground passages. A ward lantern illuminates nearby markings but does not reveal hidden creatures. Searching for a concealed door takes one exploration turn.

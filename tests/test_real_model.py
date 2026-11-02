@@ -23,7 +23,7 @@ def test_real_embeddings_pdf_index_and_paraphrased_retrieval(tmp_path):
                 "Moonwort tea cures fever. The herbalist Pell grows the medicinal plant in a rooftop garden.",
                 "The old map leads to a chamber full of gold beneath the castle."]
     with TestClient(create_app(Settings(data_dir=tmp_path), embeddings)) as client:
-        uploaded = client.post("/api/books", files={"file":("original-lore.pdf", make_pdf(passages))})
+        uploaded = client.post("/api/books", data={"collection":"rules"}, files={"file":("original-lore.pdf", make_pdf(passages))})
         book_id = uploaded.json()["book"]["id"]
         book = wait_for_book(client, book_id, timeout=60)
         assert book["status"] == "ready", book["error"]
@@ -31,6 +31,7 @@ def test_real_embeddings_pdf_index_and_paraphrased_retrieval(tmp_path):
         with client.app.state.library.db.connect() as db:
             blob = db.execute("SELECT embedding FROM chunks LIMIT 1").fetchone()[0]
         assert len(np.frombuffer(blob, dtype="<f4")) == 384
-        result = client.post("/api/retrieve", json={"query":"What remedy will help someone who is ill?", "limit":1}).json()
+        result = client.post("/api/retrieve", json={"query":"What remedy will help someone who is ill?", "collection":"rules", "limit":1}).json()
+        assert result["matches"][0]["collection"] == "rules"
         assert result["matches"][0]["source_label"] == "Page 2"
         assert "Moonwort" in result["matches"][0]["text"]

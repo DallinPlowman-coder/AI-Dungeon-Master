@@ -5,8 +5,9 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from filelock import FileLock, Timeout
@@ -22,6 +23,7 @@ from .library import Library
 STATIC = Path(__file__).parent / "static"
 FORMATS = {".pdf": "pdf", ".epub": "epub", ".txt": "txt", ".md": "md"}
 logger = logging.getLogger(__name__)
+BookCollection = Literal["rules", "campaign"]
 
 
 class UploadLimitMiddleware:
@@ -51,6 +53,7 @@ class UploadLimitMiddleware:
 class RetrievalRequest(BaseModel):
     query: str = Field(min_length=2, max_length=2000)
     book_id: uuid.UUID | None = None
+    collection: BookCollection | None = None
     limit: int = Field(default=5, ge=1, le=10)
 
     @field_validator("query")
@@ -60,6 +63,10 @@ class RetrievalRequest(BaseModel):
         if len(value) < 2 or not any(char.isalnum() for char in value):
             raise ValueError("Enter a question or some search terms.")
         return value
+
+
+class MoveBookRequest(BaseModel):
+    collection: BookCollection
 
 
 def create_app(settings: Settings | None = None, embeddings=None):
@@ -90,7 +97,7 @@ def create_app(settings: Settings | None = None, embeddings=None):
     async def local_app_headers(request: Request, call_next):
         # Browser writes must originate from this app. Local API clients need no Origin header.
         origin = request.headers.get("origin")
-        if request.method in {"POST", "DELETE"} and origin and origin != str(request.base_url).rstrip("/"):
+        if request.method in {"POST", "PATCH", "DELETE"} and origin and origin != str(request.base_url).rstrip("/"):
             return JSONResponse({"detail": "Cross-origin requests are not allowed."}, status_code=403)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -117,15 +124,15 @@ def create_app(settings: Settings | None = None, embeddings=None):
                 "max_upload_mb": settings.max_upload_mb, "formats": list(FORMATS), "storage": "local"}
 
     @app.get("/api/books")
-    def list_books():
-        return {"books": [library.describe(book) for book in library.db.list_books()]}
+    def list_books(collection: BookCollection | None = None):
+        return {"books": [library.describe(book) for book in library.db.list_books(collection)]}
 
     @app.get("/api/books/{book_id}")
     def get_book(book_id: uuid.UUID):
         return library.describe(find_book(book_id))
 
     @app.post("/api/books", status_code=202)
-    async def upload_book(file: UploadFile):
+    async def upload_book(file: UploadFile, collection: BookCollection = Form("campaign")):
         filename = re.sub(r"[\x00-\x1f\x7f]", "", (file.filename or "book").replace("\\", "/").split("/")[-1])[:240]
         suffix = Path(filename).suffix.lower()
         if suffix not in FORMATS:
@@ -145,16 +152,16 @@ def create_app(settings: Settings | None = None, embeddings=None):
                     destination.write(block)
             if not size:
                 raise HTTPException(400, "This file is empty.")
-            if existing := library.db.by_hash(digest.hexdigest()):
+            if existing := library.db.by_hash(digest.hexdigest(), collection):
                 return JSONResponse({"book": library.describe(existing), "duplicate": True}, status_code=200)
             temporary.replace(final_path)
             try:
                 library.db.add_book(book_id=book_id, title=Path(filename).stem,
                                     filename=filename, file_format=FORMATS[suffix], size_bytes=size,
-                                    digest=digest.hexdigest())
+                                    digest=digest.hexdigest(), collection=collection)
             except sqlite3.IntegrityError:
                 final_path.unlink(missing_ok=True)
-                existing = library.db.by_hash(digest.hexdigest())
+                existing = library.db.by_hash(digest.hexdigest(), collection)
                 if existing is None:
                     raise
                 return JSONResponse({"book": library.describe(existing), "duplicate": True}, status_code=200)
@@ -167,6 +174,16 @@ def create_app(settings: Settings | None = None, embeddings=None):
         finally:
             temporary.unlink(missing_ok=True)
             await file.close()
+
+    @app.patch("/api/books/{book_id}")
+    def move_book(book_id: uuid.UUID, payload: MoveBookRequest):
+        find_book(book_id)
+        try:
+            if not library.db.move_book(str(book_id), payload.collection):
+                raise HTTPException(409, "Wait for this book to finish processing before moving it.")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(409, "This book already exists in the destination collection.") from exc
+        return library.describe(find_book(book_id))
 
     @app.post("/api/books/{book_id}/reindex", status_code=202)
     def reindex_book(book_id: uuid.UUID):
@@ -195,10 +212,13 @@ def create_app(settings: Settings | None = None, embeddings=None):
     def retrieve(payload: RetrievalRequest):
         if payload.book_id:
             book = find_book(payload.book_id)
+            if payload.collection and book["collection"] != payload.collection:
+                raise HTTPException(400, "The selected book is not in the selected collection.")
             if book["status"] != "ready" or library.describe(book)["needs_reindex"]:
                 raise HTTPException(409, "This book must finish indexing before it can be searched.")
         try:
-            return library.retrieve(payload.query, str(payload.book_id) if payload.book_id else None, payload.limit)
+            return library.retrieve(payload.query, str(payload.book_id) if payload.book_id else None,
+                                    payload.limit, payload.collection)
         except Exception as exc:
             logger.exception("Retrieval failed")
             raise HTTPException(503, "Search is temporarily unavailable. Check the server log and try again.") from exc

@@ -115,14 +115,14 @@ class Library:
             with self._lock:
                 self._pending.discard(book_id)
 
-    def retrieve(self, query: str, book_id=None, limit=5):
-        ready = [book for book in self.db.list_books() if book["status"] == "ready"
+    def retrieve(self, query: str, book_id=None, limit=5, collection=None):
+        ready = [book for book in self.db.list_books(collection) if book["status"] == "ready"
                  and not self.describe(book)["needs_reindex"] and (book_id is None or book["id"] == book_id)]
         if not ready:
             return {"query": query, "matches": [], "context": ""}
         vector = self.embeddings.query(query)
         best = []
-        for batch in self.db.vector_batches(self.embeddings.name, book_id):
+        for batch in self.db.vector_batches(self.embeddings.name, book_id, collection):
             matrix = np.stack([np.frombuffer(row["embedding"], dtype="<f4") for row in batch])
             scores = matrix @ vector
             for row, score in zip(batch, scores, strict=True):
@@ -134,7 +134,8 @@ class Library:
         semantic = sorted(best, reverse=True)
         terms = list(dict.fromkeys(re.findall(r"\w+", query, flags=re.UNICODE)))[:32]
         expression = " OR ".join('"' + term + '"' for term in terms)
-        lexical = self.db.lexical_search(expression, self.embeddings.name, book_id) if terms else []
+        lexical = self.db.lexical_search(expression, self.embeddings.name, book_id,
+                                         collection=collection) if terms else []
         # Reciprocal rank fusion keeps exact game terms useful alongside semantic matches.
         candidates = {}
         for rank, (similarity, chunk_id, row) in enumerate(semantic, 1):
@@ -155,11 +156,13 @@ class Library:
             matches.append({
                 "citation": f"S{len(matches) + 1}", "chunk_id": row["id"],
                 "book_id": row["book_id"], "title": row["title"],
+                "collection": row["collection"],
                 "source_label": row["source_label"], "text": row["text"],
                 "score": round(candidate["score"], 6),
                 "similarity": round(candidate["similarity"], 4) if candidate["similarity"] is not None else None,
             })
             if len(matches) == limit:
                 break
-        context = "\n\n".join(f"[{m['citation']}] {m['title']} — {m['source_label']}\n{m['text']}" for m in matches)
+        context = "\n\n".join(f"[{m['citation']}] {m['title']} — "
+                              f"{m['collection'].capitalize()} · {m['source_label']}\n{m['text']}" for m in matches)
         return {"query": query, "matches": matches, "context": context}
