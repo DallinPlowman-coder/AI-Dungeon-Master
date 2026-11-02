@@ -14,9 +14,9 @@
 <body class="tabletop-page">
   <main class="table-main">
     <header class="table-header">
-      <a href="/" class="table-brand" aria-label="Dungeon Master book library"><img src="/static/mark.svg" width="31" height="31" alt=""><span>DUNGEON <b>MASTER</b><small>THE CHRONICLE</small></span></a>
+      <a href="/" class="table-brand" aria-label="Dungeon Master home"><img src="/static/mark.svg" width="31" height="31" alt=""><span>DUNGEON <b>MASTER</b><small>THE CHRONICLE</small></span></a>
       <div class="campaign-toolbar"><div class="campaign-selector"><label for="active-campaign" class="sr-only">Current campaign</label><select id="active-campaign"><option value="">Create your first campaign</option></select></div><button id="new-campaign" class="secondary-button" aria-label="New campaign">+ New campaign</button></div>
-      <a href="/" class="table-library-link">Book library <span aria-hidden="true">↗</span></a>
+      <nav class="table-nav" aria-label="Main navigation"><a href="/" class="table-library-link">Home</a><a href="/materials" class="table-library-link">Materials</a><a href="/campaign-docs" class="table-library-link">All docs <span aria-hidden="true">↗</span></a></nav>
     </header>
     <div class="content chronicle-content">
       <div id="campaign-notice" class="banner" role="status" hidden></div>
@@ -25,7 +25,7 @@
         <p>Choose an indexed adventure. Your local AI will read the entire book and prepare its campaign plan while you set up your character.</p>
         <form id="create-campaign-form" class="record-form"><div class="form-grid"><label>Campaign name<input name="name" required maxlength="160" placeholder="Our adventure in Briarwell"></label><label>Campaign book<select name="source_book_id" id="campaign-book" required><option value="">Choose an indexed adventure</option></select></label></div><p id="planner-status" class="muted form-help" role="status">Checking the local planner…</p><div class="form-actions"><button type="submit" class="primary-button">Create campaign &amp; plan</button><button type="button" id="cancel-create" class="secondary-button">Cancel</button></div></form>
       </section>
-      <div id="campaign-empty" class="record-panel campaign-empty"><span class="empty-book" aria-hidden="true">✧</span><h2>Give the adventure a place to live.</h2><p>Create a campaign from an uploaded book to start your character sheet, story log, and relationship records.</p><a href="/" class="text-link">Upload an adventure in the book library ↗</a></div>
+      <div id="campaign-empty" class="record-panel campaign-empty"><span class="empty-book" aria-hidden="true">✧</span><h2>Give the adventure a place to live.</h2><p>Create a campaign from an uploaded book to start your character sheet, story log, and relationship records.</p><a href="/materials" class="text-link">Upload an adventure in Materials ↗</a></div>
       <div id="campaign-workspace" hidden>
         <div class="campaign-meta"><span id="campaign-source"></span><span id="campaign-plan-badge" class="small-tag"></span></div>
         <div class="play-layout">

@@ -68,8 +68,15 @@ class CampaignStore:
 
     def list(self):
         with self.db.connect() as db:
-            return [{key:row[key] for key in ("id", "name", "source_title", "plan_status", "plan_progress", "created_at", "updated_at")}
-                    for row in db.execute("SELECT * FROM campaigns ORDER BY created_at DESC")]
+            saves = []
+            for row in db.execute("""SELECT id, name, source_title, plan_status, plan_progress,
+                    character_json, created_at, updated_at FROM campaigns
+                    ORDER BY updated_at DESC, id"""):
+                save = {key:row[key] for key in ("id", "name", "source_title", "plan_status", "plan_progress", "created_at", "updated_at")}
+                character = json.loads(row["character_json"])
+                save["character"] = {key:character[key] for key in ("name", "class_name", "level")}
+                saves.append(save)
+            return saves
 
     def get(self, campaign_id):
         with self.db.connect() as db:

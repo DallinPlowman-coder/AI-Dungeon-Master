@@ -4,59 +4,46 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171419">
-  <meta name="description" content="Build your AI Dungeon Master's knowledge library from your books.">
-  <title>The Archive · AI Dungeon Master</title>
+  <meta name="description" content="Choose your campaign, gather your books, and return to the adventure.">
+  <title>Home · AI Dungeon Master</title>
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js" defer></script>
+  <link rel="stylesheet" href="/static/home.css">
+  <script src="/static/home.js" defer></script>
 </head>
-<body>
-  <aside class="sidebar">
-    <a href="/" class="brand"><img src="/static/mark.svg" width="40" height="40" alt=""><span>DUNGEON<br><b>MASTER</b></span></a>
-    <div class="workspace-label">YOUR WORKSPACE</div>
-    <nav aria-label="Main navigation">
-      <a class="nav-link selected" href="/" aria-current="page"><span aria-hidden="true">▤</span> Book library <span class="nav-count" id="nav-count">0</span></a>
-      <a class="nav-link" href="#rules-library"><span aria-hidden="true">⚖</span> Rules</a>
-      <a class="nav-link" href="#campaign-library"><span aria-hidden="true">✧</span> Campaigns</a>
-      <a class="nav-link" href="/campaigns"><span aria-hidden="true">✎</span> Campaign records</a>
-      <a class="nav-link" href="/docs" target="_blank" rel="noopener"><span aria-hidden="true">⌘</span> API reference <span class="external" aria-hidden="true">↗</span></a>
-    </nav>
-    <div class="sidebar-note"><span class="tiny-star" aria-hidden="true">✧</span><p>Every great adventure<br>begins with a little lore.</p></div>
-    <div class="local-status"><span class="dot"></span><div>Local library<small>Your books stay on this device</small></div></div>
-  </aside>
-  <main>
-    <header class="topbar"><span>Workspace <span class="slash">/</span> <strong>Book library</strong></span><a href="/campaigns">Campaign records ↗</a></header>
-    <div class="content">
-      <div class="page-intro"><div><div class="eyebrow">KNOWLEDGE BEFORE ADVENTURE</div><h1>The Archive<span>.</span></h1><p>The rules of the game. The world of your adventure. A place for each.</p></div><div class="archive-seal" aria-hidden="true">✦</div></div>
-      <div class="banner" id="notice" role="status" hidden></div>
-      <div class="collection-grid">
-        <section class="collection-card" id="rules-library" aria-labelledby="rules-title">
-          <div class="section-heading"><div><span class="section-index">01 / HOW THE GAME WORKS</span><h2 id="rules-title">Rules <span class="count" id="rules-count">0</span></h2></div><span class="collection-emblem" aria-hidden="true">⚖</span></div>
-          <p class="collection-description">Rulebooks, character options, combat, spells, and your house rules. The references your DM uses to run the game.</p>
-          <label class="dropzone" id="rules-dropzone" for="rules-input" data-collection="rules"><span class="upload-symbol" aria-hidden="true">↥</span><strong>Upload rulebooks</strong><span>Drop files here or <span class="text-link">browse</span></span><small class="upload-types">PDF, EPUB, TXT, MD · up to 100 MB each</small><input id="rules-input" type="file" accept=".pdf,.epub,.txt,.md" multiple data-collection="rules"></label>
-          <div class="upload-progress" id="rules-progress" hidden><div><span id="rules-message">Uploading…</span><span id="rules-percent"></span></div><progress id="rules-meter" max="100" value="0" aria-label="Rules upload progress"></progress></div>
-          <div class="upload-footnote"><span>Text-based books. Scans need OCR.</span><button class="text-button sample-button" data-collection="rules">Try sample rules ↗</button></div>
-          <div class="collection-sources"><h3>Indexed rulebooks</h3><span id="rules-summary" class="muted">Ready for your first rulebook</span></div>
-          <div id="rules-list" class="library-list" aria-live="polite"></div>
-        </section>
-        <section class="collection-card" id="campaign-library" aria-labelledby="campaign-title">
-          <div class="section-heading"><div><span class="section-index">02 / WHERE THE STORY LIVES</span><h2 id="campaign-title">Campaigns <span class="count" id="campaign-count">0</span></h2></div><span class="collection-emblem" aria-hidden="true">✧</span></div>
-          <p class="collection-description">Adventure books, settings, locations, characters, and your world notes. Everything that brings your campaign to life.</p>
-          <label class="dropzone" id="campaign-dropzone" for="campaign-input" data-collection="campaign"><span class="upload-symbol" aria-hidden="true">↥</span><strong>Upload campaign books</strong><span>Drop files here or <span class="text-link">browse</span></span><small class="upload-types">PDF, EPUB, TXT, MD · up to 100 MB each</small><input id="campaign-input" type="file" accept=".pdf,.epub,.txt,.md" multiple data-collection="campaign"></label>
-          <div class="upload-progress" id="campaign-progress" hidden><div><span id="campaign-message">Uploading…</span><span id="campaign-percent"></span></div><progress id="campaign-meter" max="100" value="0" aria-label="Campaign upload progress"></progress></div>
-          <div class="upload-footnote"><span>Text-based books. Scans need OCR.</span><button class="text-button sample-button" data-collection="campaign">Try a sample adventure ↗</button></div>
-          <div class="collection-sources"><h3>Indexed campaign books</h3><span id="campaign-summary" class="muted">Ready for your first adventure</span></div>
-          <div id="campaign-list" class="library-list" aria-live="polite"></div>
-        </section>
+<body class="portal-page home-page">
+  <header class="portal-header">
+    <a href="/" class="portal-brand" aria-label="Dungeon Master home"><img src="/static/mark.svg" width="34" height="36" alt=""><span>DUNGEON <b>MASTER</b><small>YOUR ADVENTURE AWAITS</small></span></a>
+    <nav class="portal-nav" aria-label="Main navigation"><a href="/" data-nav="home">Home</a><a href="/materials">Upload Materials</a><a href="/campaign-docs" data-nav="documents">Campaign Docs</a></nav>
+    <span class="portal-local"><i aria-hidden="true"></i> Saved on this device</span>
+  </header>
+  <main class="portal-main">
+    <div id="portal-notice" class="banner" role="status" hidden></div>
+    <section id="home-view" aria-labelledby="home-title">
+      <div class="home-hero">
+        <div class="hero-copy"><span class="eyebrow">THE TABLE IS YOURS</span><h1 id="home-title">Every save.<br>A different <em>story.</em></h1><p>Pick up where you left off, or step into a new world.<br>Your Dungeon Master is waiting.</p><div class="hero-actions"><a id="continue-campaign" class="game-button" hidden>Continue adventure <span aria-hidden="true">→</span></a><button type="button" class="game-button game-button-outline" data-new-campaign><span aria-hidden="true">＋</span> New campaign</button></div></div>
+        <div class="hero-art" aria-hidden="true"><svg viewBox="0 0 400 340"><defs><radialGradient id="hero-glow"><stop stop-color="#7b485c" stop-opacity=".35"/><stop offset="1" stop-color="#7b485c" stop-opacity="0"/></radialGradient></defs><ellipse cx="205" cy="173" rx="194" ry="165" fill="url(#hero-glow)"/><g class="hero-orbits"><circle cx="205" cy="162" r="110"/><circle cx="205" cy="162" r="128"/><path d="M205 18v28m0 232v28M61 162h28m232 0h28M103 60l20 20m164 164 20 20M103 264l20-20M287 80l20-20"/><path d="M96 244 50 278h310l-46-34M75 292h260M108 306h194"/></g><g class="hero-die"><path d="m205 62 87 50v100l-87 50-87-50V112Z"/><path d="m205 62-47 75 47 125 47-125-134-25 87 150 87-150-134 25h94l-134 75h174L205 62Z"/><path class="hero-die-center" d="m158 137 94 0-47 75Z"/></g><g class="hero-stars"><path d="m64 105 3 8 8 3-8 3-3 8-3-8-8-3 8-3ZM330 65l3 8 8 3-8 3-3 8-3-8-8-3 8-3ZM337 223l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="104" cy="30" r="2"/><circle cx="356" cy="160" r="2"/><circle cx="49" cy="221" r="2"/></g></svg><span>ONE PLAYER. ENDLESS POSSIBILITIES.</span></div>
       </div>
-      <section class="retrieval-section" aria-labelledby="search-title"><div class="section-heading"><div><span class="section-index">03 / EXPLORE THE KNOWLEDGE</span><h2 id="search-title">Find a passage</h2></div><span class="small-tag">SOURCE SEARCH</span></div><p class="search-description">Try a rule, a place, or a story idea. See the passages your DM could draw from, with their sources.</p>
-        <form id="search-form"><div class="search-controls"><label class="sr-only" for="search-query">Question or search terms</label><input id="search-query" placeholder="What lurks in the ruins beneath the old city?" minlength="2" maxlength="2000" required><label class="sr-only" for="search-collection">Search collection</label><select id="search-collection"><option value="">Rules + Campaigns</option><option value="rules">Rules only</option><option value="campaign">Campaigns only</option></select><label class="sr-only" for="search-book">Search in book</label><select id="search-book"><option value="">All ready books</option></select><button type="submit" class="primary-button" id="search-button" disabled>Search archive <span aria-hidden="true">↗</span></button></div></form>
-        <div class="search-status muted" id="search-status" role="status">Your books will be searchable once indexing is complete.</div>
-        <div id="search-results"></div><div class="context-actions" id="context-actions" hidden><span class="muted">Retrieved excerpts, ready for the future DM.</span><button id="copy-context" class="secondary-button">Copy source context</button></div>
+      <section class="save-section" aria-labelledby="saves-title">
+        <div class="portal-section-heading"><div><span class="section-index">CHOOSE YOUR SAVE FILE</span><h2 id="saves-title">Your campaigns <span id="save-count" class="portal-count">0</span></h2></div><span class="section-aside">A world worth coming back to.</span></div>
+        <div id="save-list" class="save-grid" aria-live="polite"><p class="portal-loading">Opening your campaign saves…</p></div>
       </section>
-      <footer><span>AI DUNGEON MASTER</span><span>The library is the beginning. The adventure comes next.</span><a href="https://github.com/DallinPlowman-coder/AI-Dungeon-Master" target="_blank" rel="noopener">Project ↗</a></footer>
-    </div>
+      <div class="home-tools" aria-label="Campaign preparation">
+        <a class="home-tool" href="/materials"><span class="tool-icon" aria-hidden="true">↥</span><div><span class="section-index">BUILD YOUR WORLD</span><h2>Upload Materials</h2><p>Rulebooks, adventures, and a little inspiration.</p><small id="materials-summary">Rules &amp; campaign books</small></div><span class="tool-arrow" aria-hidden="true">↗</span></a>
+        <a class="home-tool" href="/campaign-docs"><span class="tool-icon" aria-hidden="true">▤</span><div><span class="section-index">KEEP YOUR STORY CLOSE</span><h2>Campaign Docs</h2><p>Character sheets, journals, and the people you meet.</p><small id="documents-summary">Organized by campaign</small></div><span class="tool-arrow" aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+    <section id="documents-view" aria-labelledby="documents-title" hidden>
+      <div class="documents-intro"><div><span class="eyebrow">EVERY CAMPAIGN HAS A PAPER TRAIL</span><h1 id="documents-title">Campaign docs<span>.</span></h1><p>Your character, your history, your world. A separate folio for each adventure.</p></div><a class="text-link" href="/">← Back to save files</a></div>
+      <div class="docs-filter-row"><label for="campaign-filter">Find a campaign</label><input id="campaign-filter" type="search" placeholder="Search campaign or character name…" maxlength="160"><span id="docs-count" class="muted" role="status"></span></div>
+      <div id="campaign-document-list" class="campaign-document-list"><p class="portal-loading">Opening your campaign folios…</p></div>
+    </section>
+    <footer class="portal-footer"><span>AI DUNGEON MASTER</span><span>Your world. Your choices. Your story.</span><a href="https://github.com/DallinPlowman-coder/AI-Dungeon-Master" target="_blank" rel="noopener">Project ↗</a></footer>
   </main>
-  <dialog id="passage-dialog"><div class="dialog-top"><div><div class="eyebrow">INSIDE THE BOOK</div><h2 id="passage-title">Passages</h2></div><button class="icon-button" id="close-passages" aria-label="Close passages">×</button></div><div id="passage-list"></div><div class="pagination"><button class="secondary-button" id="previous-passages">← Previous</button><span id="passage-range" class="muted"></span><button class="secondary-button" id="next-passages">Next →</button></div></dialog>
+  <dialog id="new-save-dialog" class="new-save-dialog" aria-labelledby="new-save-title">
+    <div class="dialog-top"><div><span class="eyebrow">A NEW CHAPTER</span><h2 id="new-save-title">Start an adventure.</h2></div><button type="button" class="icon-button" id="close-new-save" aria-label="Close new campaign">×</button></div>
+    <p>Choose an adventure book. Your campaign gets its own character, journal, relationships, and battle map.</p>
+    <form id="new-save-form"><label>Campaign name<input name="name" required maxlength="160" placeholder="Give this adventure a name…"></label><label>Campaign book<select name="source_book_id" required id="new-save-book"><option value="">Loading adventure books…</option></select></label><p id="new-save-help" class="muted" role="status"></p><div id="new-save-error" class="banner error" role="alert" hidden></div><div class="new-save-actions"><a href="/materials" class="text-link">Upload an adventure ↗</a><button type="submit" id="create-save" class="game-button" disabled>Create campaign <span aria-hidden="true">→</span></button></div></form>
+  </dialog>
 </body>
 </html>

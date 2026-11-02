@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171419">
+  <meta name="description" content="Build your AI Dungeon Master's knowledge library from your books.">
+  <title>Upload Materials · AI Dungeon Master</title>
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/home.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body class="portal-page materials-page">
+  <header class="portal-header">
+    <a href="/" class="portal-brand" aria-label="Dungeon Master home"><img src="/static/mark.svg" width="34" height="36" alt=""><span>DUNGEON <b>MASTER</b><small>YOUR ADVENTURE AWAITS</small></span></a>
+    <nav class="portal-nav" aria-label="Main navigation"><a href="/">Home</a><a href="/materials" aria-current="page">Upload Materials <span id="nav-count" class="portal-count">0</span></a><a href="/campaign-docs">Campaign Docs</a></nav>
+    <span class="portal-local"><i aria-hidden="true"></i> Saved on this device</span>
+  </header>
+  <main>
+    <div class="content materials-content">
+      <div class="page-intro"><div><div class="eyebrow">PREPARE YOUR NEXT ADVENTURE</div><h1>Upload materials<span>.</span></h1><p>Your rulebooks and adventure books, ready for the Dungeon Master.</p></div><div class="archive-seal" aria-hidden="true">✦</div></div>
+      <div class="banner" id="notice" role="status" hidden></div>
+      <div class="collection-grid">
+        <section class="collection-card" id="rules-library" aria-labelledby="rules-title">
+          <div class="section-heading"><div><span class="section-index">01 / HOW THE GAME WORKS</span><h2 id="rules-title">Rules <span class="count" id="rules-count">0</span></h2></div><span class="collection-emblem" aria-hidden="true">⚖</span></div>
+          <p class="collection-description">Rulebooks, character options, combat, spells, and your house rules. The references your DM uses to run the game.</p>
+          <label class="dropzone" id="rules-dropzone" for="rules-input" data-collection="rules"><span class="upload-symbol" aria-hidden="true">↥</span><strong>Upload rulebooks</strong><span>Drop files here or <span class="text-link">browse</span></span><small class="upload-types">PDF, EPUB, TXT, MD · up to 100 MB each</small><input id="rules-input" type="file" accept=".pdf,.epub,.txt,.md" multiple data-collection="rules"></label>
+          <div class="upload-progress" id="rules-progress" hidden><div><span id="rules-message">Uploading…</span><span id="rules-percent"></span></div><progress id="rules-meter" max="100" value="0" aria-label="Rules upload progress"></progress></div>
+          <div class="upload-footnote"><span>Text-based books. Scans need OCR.</span><button class="text-button sample-button" data-collection="rules">Try sample rules ↗</button></div>
+          <div class="collection-sources"><h3>Indexed rulebooks</h3><span id="rules-summary" class="muted">Ready for your first rulebook</span></div>
+          <div id="rules-list" class="library-list" aria-live="polite"></div>
+        </section>
+        <section class="collection-card" id="campaign-library" aria-labelledby="campaign-title">
+          <div class="section-heading"><div><span class="section-index">02 / WHERE THE STORY LIVES</span><h2 id="campaign-title">Campaign books <span class="count" id="campaign-count">0</span></h2></div><span class="collection-emblem" aria-hidden="true">✧</span></div>
+          <p class="collection-description">Adventure books, settings, locations, characters, and your world notes. Everything that brings your campaign to life.</p>
+          <label class="dropzone" id="campaign-dropzone" for="campaign-input" data-collection="campaign"><span class="upload-symbol" aria-hidden="true">↥</span><strong>Upload campaign books</strong><span>Drop files here or <span class="text-link">browse</span></span><small class="upload-types">PDF, EPUB, TXT, MD · up to 100 MB each</small><input id="campaign-input" type="file" accept=".pdf,.epub,.txt,.md" multiple data-collection="campaign"></label>
+          <div class="upload-progress" id="campaign-progress" hidden><div><span id="campaign-message">Uploading…</span><span id="campaign-percent"></span></div><progress id="campaign-meter" max="100" value="0" aria-label="Campaign upload progress"></progress></div>
+          <div class="upload-footnote"><span>Text-based books. Scans need OCR.</span><button class="text-button sample-button" data-collection="campaign">Try a sample adventure ↗</button></div>
+          <div class="collection-sources"><h3>Indexed campaign books</h3><span id="campaign-summary" class="muted">Ready for your first adventure</span></div>
+          <div id="campaign-list" class="library-list" aria-live="polite"></div>
+        </section>
+      </div>
+      <section class="retrieval-section" aria-labelledby="search-title"><div class="section-heading"><div><span class="section-index">03 / EXPLORE THE KNOWLEDGE</span><h2 id="search-title">Find a passage</h2></div><span class="small-tag">SOURCE SEARCH</span></div><p class="search-description">Try a rule, a place, or a story idea. See the passages your DM could draw from, with their sources.</p>
+        <form id="search-form"><div class="search-controls"><label class="sr-only" for="search-query">Question or search terms</label><input id="search-query" placeholder="What lurks in the ruins beneath the old city?" minlength="2" maxlength="2000" required><label class="sr-only" for="search-collection">Search collection</label><select id="search-collection"><option value="">Rules + Campaigns</option><option value="rules">Rules only</option><option value="campaign">Campaigns only</option></select><label class="sr-only" for="search-book">Search in book</label><select id="search-book"><option value="">All ready books</option></select><button type="submit" class="primary-button" id="search-button" disabled>Search archive <span aria-hidden="true">↗</span></button></div></form>
+        <div class="search-status muted" id="search-status" role="status">Your books will be searchable once indexing is complete.</div>
+        <div id="search-results"></div><div class="context-actions" id="context-actions" hidden><span class="muted">Retrieved excerpts, ready for the future DM.</span><button id="copy-context" class="secondary-button">Copy source context</button></div>
+      </section>
+      <footer><span>AI DUNGEON MASTER</span><span>A little lore goes a long way.</span><a href="https://github.com/DallinPlowman-coder/AI-Dungeon-Master" target="_blank" rel="noopener">Project ↗</a></footer>
+    </div>
+  </main>
+  <dialog id="passage-dialog"><div class="dialog-top"><div><div class="eyebrow">INSIDE THE BOOK</div><h2 id="passage-title">Passages</h2></div><button class="icon-button" id="close-passages" aria-label="Close passages">×</button></div><div id="passage-list"></div><div class="pagination"><button class="secondary-button" id="previous-passages">← Previous</button><span id="passage-range" class="muted"></span><button class="secondary-button" id="next-passages">Next →</button></div></dialog>
+</body>
+</html>

@@ -95,6 +95,9 @@
 .table-library-link span { color:var(--gold); margin-left:5px; }
 .tabletop-page .chronicle-content { padding:0; margin:0; max-width:none; flex:1; min-height:0; position:relative; }
 .tabletop-page #campaign-workspace { height:100%; }
+.table-nav { display:flex; align-items:center; gap:16px; }
+.table-nav .table-library-link { white-space:nowrap; }
+.records-dialog-heading h2 { overflow-wrap:anywhere; }
 .tabletop-page .campaign-meta { display:none; }
 .tabletop-page #campaign-notice { position:absolute; z-index:10; top:12px; left:24px; max-width:calc(100% - var(--rail-width) - 48px); box-shadow:0 8px 30px #0005; }
 .tabletop-page #create-panel { position:absolute; z-index:12; top:14px; left:50%; transform:translateX(-50%); width:min(650px,calc(100% - 32px)); max-height:calc(100dvh - 95px); overflow:auto; box-shadow:0 20px 80px #0008; }

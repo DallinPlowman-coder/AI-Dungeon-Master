@@ -141,7 +141,10 @@ def test_processing_actions_are_guarded(tmp_path):
 
 def test_static_app_and_cross_origin_guard(client):
     response = client.get("/")
-    assert response.status_code == 200 and "The Archive" in response.text
+    assert response.status_code == 200 and "CHOOSE YOUR SAVE FILE" in response.text
+    assert client.get("/materials").status_code == 200
+    assert "rules-input" in client.get("/materials").text
+    assert "campaign-document-list" in client.get("/campaign-docs").text
     assert "default-src 'self'" in response.headers["content-security-policy"]
     assert client.get("/static/app.js").status_code == 200
     assert client.get("/docs").status_code == 200

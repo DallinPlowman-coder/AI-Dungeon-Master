@@ -136,6 +136,14 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
     def index():
         return FileResponse(STATIC / "index.html")
 
+    @app.get("/materials", include_in_schema=False)
+    def materials():
+        return FileResponse(STATIC / "materials.html")
+
+    @app.get("/campaign-docs", include_in_schema=False)
+    def campaign_documents():
+        return FileResponse(STATIC / "index.html")
+
     @app.get("/campaigns", include_in_schema=False)
     def campaign_workspace():
         return FileResponse(STATIC / "campaigns.html")

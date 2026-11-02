@@ -8,6 +8,11 @@ let current = null, dmContext = null, npcMemories = [], characterDirty = false, 
 let selectedTab = "character", polling = false, contextBlobURL = null, eventKey = null;
 let characterFormRevision = 0;
 let noticeTimeout = null;
+window.addEventListener("beforeunload", (event) => {
+  if (characterDirty || npcDirty || dmDirty || (typeof tableHasDraft === "function" && tableHasDraft())) {
+    event.preventDefault(); event.returnValue = "";
+  }
+});
 const title = (text) => text.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const bonus = (value) => `${value >= 0 ? "+" : ""}${value}`;
 function announce(message, error = false) {
@@ -76,6 +81,9 @@ async function loadCampaign(id, reset = false) {
   if (reset) { characterDirty = npcDirty = dmDirty = false; dmContext = null; npcMemories = []; q("#npc-editor").open = false; q("#dm-workspace").hidden = true; q("#dm-gate").hidden = false; }
   current = state;
   localStorage.setItem("dm-active-campaign", id);
+  const url = new URL(location.href);
+  url.searchParams.set("campaign", id);
+  history.replaceState(null, "", url.pathname + url.search + url.hash);
   q("#campaign-workspace").hidden = false;
   q("#campaign-empty").hidden = true;
   q("#campaign-source").textContent = `Source adventure: ${current.source_title}`;
@@ -253,7 +261,21 @@ async function poll() {
   finally { polling = false; setTimeout(poll, ["queued", "reading", "synthesizing"].includes(current?.plan_status) || current?.rolls?.some((roll) => roll.status === "pending") || current?.battle?.state?.combat.active ? 2000 : 7000); }
 }
 (async () => {
-  try { const campaigns = await refreshCampaignList(); if (campaigns.length) await loadCampaign(q("#active-campaign").value, true); else await showCreate(); }
+  try {
+    const params = new URLSearchParams(location.search), requested = params.get("campaign");
+    const campaigns = await refreshCampaignList();
+    if (requested && !campaigns.some((campaign) => campaign.id === requested)) {
+      q("#campaign-empty").innerHTML = '<h2>This save file is unavailable.</h2><p>Choose one of your existing campaigns from the home screen.</p><a href="/" class="text-link">Return home →</a>';
+      q("#active-campaign").value = "";
+      announce("That campaign could not be found. Your other saves are available from Home.", true);
+    } else if (campaigns.length) {
+      const id = requested || q("#active-campaign").value;
+      q("#active-campaign").value = id;
+      await loadCampaign(id, true);
+      const tab = params.get("docs");
+      if (["character", "log", "relationships", "plan"].includes(tab)) openCampaignDocs(tab);
+    } else await showCreate();
+  }
   catch (error) { announce(error.message, true); }
   poll();
 })();

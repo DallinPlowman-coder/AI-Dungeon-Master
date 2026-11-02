@@ -13,7 +13,11 @@ python -m pip install -e '.[dev]'
 python -m dungeon_master
 ```
 
-Open **http://127.0.0.1:8000**. Upload a book to **Rules** or **Campaigns**, or try a sample in either area. Wait for **Ready for retrieval**, then use **Find a passage** to verify the index. **View passages** shows the extracted text and its source location.
+Open **http://127.0.0.1:8000** for the game home screen. Choose a campaign save, continue the last campaign opened in this browser, or start a new campaign from an indexed adventure. Each save card shows the saved character, class, level, source adventure, and last saved time.
+
+**Upload Materials** (`/materials`) contains separate **Rules** and **Campaign Books** areas. Upload a book or try a sample, wait for **Ready for retrieval**, then use **Find a passage** to verify the index. **View passages** shows the extracted text and its source location.
+
+**Campaign Docs** (`/campaign-docs`) groups character sheets, campaign logs, relationships, and the DM plan by campaign. Search by campaign or character name, open a specific document for editing, or download player documents as PDF, Markdown, or JSON. DM plans retain their explicit spoiler gate. Document and play links carry the campaign ID, so they open the intended save regardless of the last campaign selected in this browser.
 
 ## Two source collections
 
@@ -54,7 +58,7 @@ The app now includes local campaign planning and persistent game records. Live D
 
 ## Campaign records and downloads
 
-Open **http://127.0.0.1:8000/campaigns**, or select **Campaign records** in the app. Create a campaign from a fully indexed adventure in the Campaigns collection. Each campaign keeps independent records:
+Choose **Load campaign** from Home to open its play table, or choose a record in **Campaign Docs**. **New campaign** on Home creates a save from a fully indexed adventure in the Campaign Books collection and opens its character sheet. `/campaigns?campaign={id}` links directly to a save; add `&docs=character`, `log`, `relationships`, or `plan` to open a particular document. A missing campaign ID shows an unavailable-save message instead of silently opening another campaign. Each campaign keeps independent records:
 
 The campaign table puts a collapsible battle map above the story journal, with a fixed character sidebar for HP, AC, speed, abilities, trained skills, weapons, inventory, and the latest recorded world time. **Campaign docs** opens the complete records and downloads without leaving the table. The composer currently saves journal entries; AI conversation is a future step. Ctrl/Cmd + Enter also saves an entry.
 

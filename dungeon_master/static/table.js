@@ -6,6 +6,7 @@ const abilityNames = {strength:"STR", dexterity:"DEX", constitution:"CON", intel
 
 function openCampaignDocs(tab = "character") {
   switchTab(tab);
+  q("#records-title").textContent = current?.name || "Campaign docs";
   if (!q("#records-dialog").open) q("#records-dialog").showModal();
 }
 q("#open-docs").addEventListener("click", () => openCampaignDocs());
