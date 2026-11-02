@@ -7,12 +7,17 @@ const textFields = ["attacks", "inventory", "currency", "features", "languages",
 let current = null, dmContext = null, npcMemories = [], characterDirty = false, npcDirty = false, dmDirty = false;
 let selectedTab = "character", polling = false, contextBlobURL = null, eventKey = null;
 let characterFormRevision = 0;
+let noticeTimeout = null;
 const title = (text) => text.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const bonus = (value) => `${value >= 0 ? "+" : ""}${value}`;
 function announce(message, error = false) {
-  q("#campaign-notice").textContent = message;
-  q("#campaign-notice").classList.toggle("error", error);
-  q("#campaign-notice").hidden = false;
+  const target = q("#records-dialog")?.open ? q("#records-notice") : q("#campaign-notice");
+  clearTimeout(noticeTimeout);
+  for (const notice of [q("#campaign-notice"), q("#records-notice")]) if (notice && notice !== target) notice.hidden = true;
+  target.textContent = message;
+  target.classList.toggle("error", error);
+  target.hidden = false;
+  if (!error) noticeTimeout = setTimeout(() => target.hidden = true, 5000);
 }
 async function request(url, options = {}) {
   const response = await fetch(url, options);
@@ -40,7 +45,7 @@ function renderCharacter() {
     <div class="record-group"><h3>Identity</h3><div class="form-grid three-columns">
       ${field("name", c.name, {label:"Character name"})}${field("player_name", c.player_name)}${field("pronouns", c.pronouns)}
       ${field("class_name", c.class_name, {label:"Class"})}${field("subclass", c.subclass)}${field("level", c.level, {type:"number", min:1, max:20})}
-      ${field("ancestry", c.ancestry)}${field("background", c.background)}
+      ${field("ancestry", c.ancestry, {label:"Species"})}${field("background", c.background)}
     </div></div>
     <div class="record-group"><h3>Ability scores</h3><div class="ability-grid">${abilities.map((ability) => `<label>${ability}<input name="ability-${ability}" type="number" min="1" max="30" required value="${c.abilities[ability]}"><small data-modifier="${ability}">${bonus(d.modifiers[ability])} modifier</small></label>`).join("")}</div></div>
     <div class="record-group"><h3>Combat &amp; resources</h3><div class="form-grid three-columns">
@@ -51,6 +56,7 @@ function renderCharacter() {
     </div><div class="check-row"><label><input type="checkbox" name="inspiration" ${c.inspiration ? "checked" : ""}> Inspiration</label></div><p class="form-help muted">Passive perception: ${d.passive_perception}. Proficiency and initiative can be adjusted for your rules.</p></div>
     <details class="record-group"><summary>Saving throws &amp; skill training</summary><h3>Saving throw proficiencies</h3><div class="check-row">${abilities.map((ability) => `<label><input type="checkbox" data-save="${ability}" ${c.saving_throw_proficiencies.includes(ability) ? "checked" : ""}> ${title(ability)} (${bonus(d.saving_throws[ability])})</label>`).join("")}</div><h3>Skills</h3><div class="skill-grid">${skills.map((skill) => `<div class="skill-choice"><span>${skill} (${bonus(d.skills[skill])})</span><div><label><input type="checkbox" data-skill="${skill}" ${c.skill_proficiencies.includes(skill) ? "checked" : ""}> Trained</label><label><input type="checkbox" data-expertise="${skill}" ${c.skill_expertise.includes(skill) ? "checked" : ""}> Expert</label></div></div>`).join("")}</div></details>
     <details class="record-group"><summary>Spellcasting, equipment &amp; character details</summary><div class="form-grid"><label>Spellcasting ability<select name="spellcasting_ability"><option value="">None</option>${abilities.map((ability) => `<option value="${ability}" ${c.spellcasting_ability === ability ? "selected" : ""}>${title(ability)}</option>`).join("")}</select></label><label>Spell slots: level, total, used<textarea name="spell_slots" rows="3" placeholder="1, 4, 2">${c.spell_slots.map((slot) => `${slot.level}, ${slot.total}, ${slot.used}`).join("\n")}</textarea></label></div><div class="character-text-grid">${textFields.map((key) => `<label>${title(key)}<textarea name="${key}" rows="3" maxlength="12000">${esc(c[key])}</textarea></label>`).join("")}</div></details>`;
+  if (typeof renderTableCharacter === "function") renderTableCharacter();
 }
 function renderLog() {
   q("#event-list").innerHTML = current.events.length ? [...current.events].reverse().map((event) => `<article class="event-card"><span class="event-meta">SESSION ${event.session} · ${esc(event.kind.toUpperCase())} · ${esc(event.world_time || new Date(event.created_at).toLocaleString())}</span><h3>${esc(event.title)}</h3><p>${esc(event.summary)}</p>${event.details ? `<details><summary>Full scene / details</summary><p>${esc(event.details)}</p></details>` : ""}</article>`).join("")
@@ -75,6 +81,7 @@ async function loadCampaign(id, reset = false) {
   updatePlanBadge();
   if (!characterDirty) renderCharacter();
   renderLog(); renderNpcs(); downloads();
+  if (typeof renderTable === "function") renderTable();
   if (dmContext && !dmDirty) await loadDm();
 }
 async function refreshCampaignList() {
@@ -109,7 +116,7 @@ q("#create-campaign-form").addEventListener("submit", async (event) => {
   } catch (error) { announce(error.message, true); } finally { button.disabled = false; }
 });
 q("#active-campaign").addEventListener("change", async (event) => {
-  if ((characterDirty || npcDirty || dmDirty) && !confirm("Switch campaigns and discard unsaved form changes?")) { event.target.value = current.id; return; }
+  if ((characterDirty || npcDirty || dmDirty || (typeof tableHasDraft === "function" && tableHasDraft())) && !confirm("Switch campaigns and discard unsaved form changes?")) { event.target.value = current.id; return; }
   try { await loadCampaign(event.target.value, true); } catch (error) { announce(error.message, true); }
 });
 function switchTab(tab) {
@@ -127,6 +134,7 @@ document.querySelectorAll("[data-tab]").forEach((button) => {
 q("#character-form").addEventListener("input", (event) => {
   characterDirty = true; q("#character-saved").textContent = "Unsaved changes";
   if (event.target.name.startsWith("ability-")) { const ability = event.target.name.slice(8); q(`[data-modifier="${ability}"]`).textContent = `${bonus(Math.floor((Number(event.target.value) - 10) / 2))} modifier`; }
+  if (typeof renderTableCharacter === "function") renderTableCharacter();
 });
 q("#reload-character").addEventListener("click", async () => {
   if (characterDirty && !confirm("Discard unsaved changes and reload the saved character sheet?")) return;

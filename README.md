@@ -56,6 +56,10 @@ The app now includes local campaign planning and persistent game records. Live D
 
 Open **http://127.0.0.1:8000/campaigns**, or select **Campaign records** in the app. Create a campaign from a fully indexed adventure in the Campaigns collection. Each campaign keeps independent records:
 
+The campaign table puts a collapsible battle map above the story journal, with a fixed character sidebar for HP, AC, speed, abilities, trained skills, weapons, inventory, and the latest recorded world time. **Campaign docs** opens the complete records and downloads without leaving the table. The composer currently saves journal entries; AI conversation is a future step. Ctrl/Cmd + Enter also saves an entry.
+
+Optional portrait and map images accept PNG, JPEG, or WebP up to 8 MB. Artwork and map visibility preferences are stored per campaign in the current browser; they are not included in server backups or document downloads. Journal entries and character records continue to use the canonical SQLite campaign store. Character edits preview in the sidebar and remain marked as an unsaved draft until saved in Docs.
+
 - **Character sheet:** identity, six ability scores, derived modifiers, all 18 skills, saves, HP, armor, initiative, speed, proficiency, hit dice, death saves, conditions, spells/slots, equipment, backstory, traits, and notes. Private character notes are excluded from player copies. Revision checks prevent an open form from overwriting newer character updates.
 - **Campaign log:** ordered session events with timestamps, choices, discoveries, combat, loot, and the full scene/details. Hidden DM events stay out of player copies. Events are append-only; the story log is separate from the generated plan.
 - **NPC relationships:** disposition, trust, feelings, public notes, private motives, and individual facts the NPC knows about the player. Each fact states how it was learned and can reference a log event. Facts from another campaign are rejected. Player copies include only known NPCs, revealed knowledge, and explicitly revealed feelings.
