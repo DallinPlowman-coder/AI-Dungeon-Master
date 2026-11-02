@@ -4,6 +4,7 @@ import uuid
 from .database import now
 from .alignment import AlignmentMemory
 from .dice import CampaignDice
+from .battle import CampaignBattle
 from .records import CharacterSheet, NpcMemory, TurnUpdate
 
 
@@ -12,6 +13,7 @@ class CampaignStore:
         self.db = database
         self.alignment = AlignmentMemory(database)
         self.dice = CampaignDice(database)
+        self.battle = CampaignBattle(database)
 
     def initialize(self):
         with self.db.connect() as db:
@@ -53,6 +55,7 @@ class CampaignStore:
                 db.execute("ALTER TABLE campaigns ADD COLUMN character_revision INTEGER NOT NULL DEFAULT 0")
             self.alignment.initialize(db)
             self.dice.initialize(db)
+            self.battle.initialize(db)
 
     @staticmethod
     def decode(row):
@@ -199,6 +202,8 @@ class CampaignStore:
             self.alignment.queue(db, campaign_id, json.loads(row["character_json"])["level"], sheet)
             for request in update.roll_requests:
                 self.dice.queue(db, campaign_id, request, source_event_id=event_id)
+            if update.battle_update is not None:
+                self.battle.apply(campaign_id, update.battle_update, db=db)
             return {"event_id":event_id, "duplicate":False}
 
     def planning(self, campaign_id, **values):
@@ -237,6 +242,7 @@ class CampaignStore:
         campaign["npcs"] = self.npcs(campaign_id, player=not dm)
         campaign["derived"] = CharacterSheet.model_validate(campaign["character"]).derived()
         campaign["rolls"] = self.dice.list(campaign_id, dm=dm)
+        campaign["battle"] = self.battle.snapshot(campaign_id, character=campaign["character"])
         if dm:
             campaign["alignment"] = self.alignment.context(campaign_id)
         if not dm:

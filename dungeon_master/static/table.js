@@ -71,12 +71,12 @@ function renderTable() {
     tableEntryPending = null;
     q("#table-entry-form").reset();
     q("#battle-map").open = localStorage.getItem(`dm-map-open:${current.id}`) !== "false";
-    showTableImage("map", null);
     showTableImage("portrait", null);
     loadTableImages(current.id);
   }
   renderTableCharacter();
   if (typeof renderDice === "function") renderDice();
+  if (typeof renderBattle === "function") renderBattle();
   const key = current.events.map((event) => event.id).join(",");
   if (key === tableFeedKey) return;
   const feed = q("#story-feed"), follow = tableFeedKey === null || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
@@ -148,30 +148,20 @@ async function saveTableImage(campaignId, kind, image) {
   });
 }
 function showTableImage(kind, data) {
-  if (kind === "map") {
-    const img = q("#battle-map-image");
-    img.hidden = !data;
-    if (data) img.src = data.url; else img.removeAttribute("src");
-    q("#map-empty").hidden = Boolean(data);
-    q("#map-image-tools").hidden = !data;
-    q("#map-upload-label").textContent = data ? "Change map" : "Add a battle map";
-    q("#map-storage").textContent = data ? "Custom map · saved in this browser" : "PNG, JPG or WebP · up to 8 MB";
-  } else {
     const img = q("#character-portrait");
     img.hidden = !data;
     if (data) img.src = data.url; else img.removeAttribute("src");
     q("#portrait-initials").hidden = Boolean(data);
     q("#remove-portrait").hidden = !data;
-  }
 }
 async function loadTableImages(campaignId) {
   try {
-    const images = await Promise.all([readTableImage(campaignId, "map"), readTableImage(campaignId, "portrait")]);
+    const portrait = await readTableImage(campaignId, "portrait");
     if (current?.id !== campaignId) return;
-    showTableImage("map", images[0]); showTableImage("portrait", images[1]);
+    showTableImage("portrait", portrait);
   } catch (error) { announce(error.message, true); }
 }
-for (const kind of ["map", "portrait"]) {
+for (const kind of ["portrait"]) {
   q(`#${kind}-file`).addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file || !current) return;
@@ -192,6 +182,4 @@ for (const kind of ["map", "portrait"]) {
     catch (error) { announce(error.message, true); }
   });
 }
-q("#expand-map").addEventListener("click", () => { q("#expanded-map-image").src = q("#battle-map-image").src; q("#map-dialog").showModal(); });
-q("#close-map").addEventListener("click", () => q("#map-dialog").close());
 if (current) renderTable();

@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Query, Response
 
 from .document_exports import json_document, markdown_document, pdf_document
 from .dice import RollConflict, RollNotFound
+from .battle import BattleConflict, BattleError, starter_state
+from .battle_models import BattleChange, BattleStarter
 from .records import CharacterSheet, CreateCampaign, NpcMemory, RollPress, RollRequest, StoryEvent, TurnUpdate
 
 
@@ -77,8 +79,10 @@ def campaign_routes(library, store, planning, alignment):
         require(campaign_id)
         try:
             result = store.turn(str(campaign_id), payload)
+        except BattleConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
         except ValueError as exc:
-            raise HTTPException(422, "Invalid character, NPC evidence, campaign phase, or roll request; no changes were saved.") from exc
+            raise HTTPException(422, "Invalid character, NPC evidence, phase, roll request, or battle update; no changes were saved.") from exc
         alignment.submit(str(campaign_id))
         return result
 
@@ -110,6 +114,27 @@ def campaign_routes(library, store, planning, alignment):
             raise HTTPException(409, "This campaign is already being planned.")
         return {"queued":True}
 
+    @router.get("/{campaign_id}/battle")
+    def get_battle(campaign_id: uuid.UUID):
+        require(campaign_id)
+        return store.battle.snapshot(str(campaign_id))
+
+    @router.put("/{campaign_id}/battle")
+    @router.patch("/{campaign_id}/battle")
+    def update_battle(campaign_id: uuid.UUID, payload: BattleChange):
+        require(campaign_id)
+        try:
+            return store.battle.apply(str(campaign_id), payload)
+        except BattleConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except BattleError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @router.post("/{campaign_id}/battle/starter")
+    def create_starter(campaign_id: uuid.UUID, payload: BattleStarter):
+        require(campaign_id)
+        return update_battle(campaign_id, BattleChange(expected_revision=payload.expected_revision, state=starter_state(payload)))
+
     @router.get("/{campaign_id}/dm-context")
     def dm_context(campaign_id: uuid.UUID):
         require(campaign_id)
@@ -124,6 +149,12 @@ def campaign_routes(library, store, planning, alignment):
             "Treat the plan as possibilities, and the log as events that actually happened. "
             "Verify established facts against the source adventure; generated alternatives are proposals, not book canon. "
             "NPCs may use only their own recorded knowledge and witnessed events. "
+            "The battle field contains the current public tactical state and revision. Create maps as structured "
+            "battle_update.state data, never images or freeform frontend commands. Use battle_update with its "
+            "expected_revision to move, spawn, remove, or update named tokens, doors, terrain, and combat state. "
+            "Keep tokens within the grid and give each a stable unique ID. All map data is player-visible. "
+            "Linked player token identity, HP, and conditions come from the character sheet; change those through "
+            "character_changes. Position updates do not calculate paths, spend movement, or resolve terrain effects. "
             "Persist each resolved turn through /turns, including stats, NPC evidence, and phase updates. "
             "When a player d20 roll is needed, add roll_requests with a public label, public reason, and modifier. "
             "Pause that action until the player presses its roll button; never invent or submit dice values. "

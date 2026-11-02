@@ -58,7 +58,7 @@ Open **http://127.0.0.1:8000/campaigns**, or select **Campaign records** in the 
 
 The campaign table puts a collapsible battle map above the story journal, with a fixed character sidebar for HP, AC, speed, abilities, trained skills, weapons, inventory, and the latest recorded world time. **Campaign docs** opens the complete records and downloads without leaving the table. The composer currently saves journal entries; AI conversation is a future step. Ctrl/Cmd + Enter also saves an entry.
 
-Optional portrait and map images accept PNG, JPEG, or WebP up to 8 MB. Artwork and map visibility preferences are stored per campaign in the current browser; they are not included in server backups or document downloads. Journal entries and character records continue to use the canonical SQLite campaign store. Character edits preview in the sidebar and remain marked as an unsaved draft until saved in Docs.
+Optional character portraits accept PNG, JPEG, or WebP up to 8 MB and stay in the current browser. Map visibility preferences also stay in this browser. Tactical maps, journal entries, and character records use the canonical SQLite campaign store. Character edits preview in the sidebar and remain marked as an unsaved draft until saved in Docs.
 
 - **Character sheet:** identity, six ability scores, derived modifiers, all 18 skills, saves, HP, armor, initiative, speed, proficiency, hit dice, death saves, conditions, spells/slots, equipment, backstory, traits, and notes. Private character notes are excluded from player copies. Revision checks prevent an open form from overwriting newer character updates.
 - **Campaign log:** ordered session events with timestamps, choices, discoveries, combat, loot, and the full scene/details. Hidden DM events stay out of player copies. Events are append-only; the story log is separate from the generated plan.
@@ -89,6 +89,55 @@ The **Roll d20** shortcut handles the next pending check, or makes a free roll i
 Submit that to `POST /api/campaigns/{id}/turns`. Requests commit atomically with the scene. Labels and reasons are public, so keep hidden information out of them. The future DM must wait for the matching stored result before resolving that action. It must not invent a dice value or substitute an unrelated free roll.
 
 `POST /api/campaigns/{id}/rolls` also queues a request; reuse its `idempotency_key` when retrying creation. `POST /api/campaigns/{id}/rolls/{roll_id}/roll` accepts an empty body and generates an unbiased integer from 1 to 20 with Python's local `secrets` generator. The modifier is fixed when requested. Roll resolution and its log event commit together; repeat or concurrent presses return that same saved result. Pending checks and completed results survive restarts. Rolls do not automatically change HP or adjudicate success, failure, or critical outcomes.
+
+### Tactical battle map
+
+The table's **Battle map** opens a lightweight SVG tactical sketch. **Load starter encounter** creates an illustrative outpost with walls, a door, cover, difficult terrain, water, hazards, and five named circular tokens. **Setup** also offers an empty grid, configurable dimensions from 10–30 squares per side, token placement/removal, door controls, and a combat toggle. The template is a practice layout, not an encounter inferred from the uploaded adventure.
+
+Each square is 5 feet. Blue tokens are players, green allies, red enemies, and gray neutrals. Names shrink or abbreviate to fit; hover or select a token to read its full name. Selection also shows available HP, conditions, and remaining movement. Drag onto a square, select then click a destination, or use arrow keys on a focused token. Zoom, fit, and expand controls support larger boards. Collapsing the map keeps its state; positions and encounter data survive reloads and server restarts.
+
+The renderer receives structured state from the campaign store and owns only selection, zoom, and temporary drag visuals. Backend and future AI turns use the same validated contract. Read `GET /api/campaigns/{id}/battle` for `{state, revision, updated_at}`, then create or replace a map with `PUT /api/campaigns/{id}/battle`:
+
+```json
+{
+  "expected_revision": 0,
+  "state": {
+    "title": "The broken gate",
+    "map": {
+      "width": 10, "height": 10, "feet_per_cell": 5,
+      "terrain": [{"x": 5, "y": 3, "kind": "obstacle"}],
+      "walls": [{"x1": 1, "y1": 1, "x2": 9, "y2": 1}],
+      "doors": [{"id": "gate", "x1": 4, "y1": 1, "x2": 5, "y2": 1, "open": false}]
+    },
+    "tokens": [
+      {"id": "pc_1", "name": "Adventurer", "faction": "player", "character_ref": "player", "x": 4, "y": 8},
+      {"id": "enemy_1", "name": "Goblin 1", "faction": "enemy", "x": 3, "y": 2, "hp_current": 7, "hp_max": 7}
+    ],
+    "combat": {"active": true, "round": 1, "active_token_id": "pc_1"}
+  }
+}
+```
+
+API cell coordinates are **zero-based**; labels and placement controls in the UI are one-based. Wall endpoints lie on grid intersections, and each door occupies one horizontal or vertical edge. Unlisted cells are open floor. Terrain kinds are `floor`, `difficult`, `water`, `hazard`, and `obstacle`. API boards support 3–40 squares per side and up to 100 tokens. Token IDs are stable identifiers independent of names; multiple creatures may share a displayed name.
+
+Patch existing state with `PATCH /api/campaigns/{id}/battle`, using the revision returned by the last read or write:
+
+```json
+{
+  "expected_revision": 1,
+  "move_tokens": [{"id": "enemy_1", "x": 4, "y": 2}],
+  "spawn_tokens": [{"id": "ally_1", "name": "Guard", "faction": "ally", "x": 3, "y": 8}],
+  "token_updates": [{"id": "enemy_1", "conditions": ["Prone"], "movement_remaining": 15}],
+  "door_updates": [{"id": "gate", "open": true}],
+  "combat": {"active": true, "round": 2, "active_token_id": "enemy_1"}
+}
+```
+
+`remove_tokens` accepts token IDs; `map` replaces the complete grid geometry while retaining tokens. A full `state` replacement cannot be mixed with patches. Writes validate the final state atomically: tokens must be in bounds, on distinct squares, and outside obstacles; active combat tokens must exist. A stale revision returns 409 without overwriting newer state. Invalid edits return 422 and preserve the previous map. Removing the active token clears its turn marker.
+
+Both player snapshots and DM context include `battle`. A future DM can include the same change object as `battle_update` in `/turns`, committing the map together with narration, character changes, roll requests, and NPC memory. Reuse the turn's idempotency key on retries. Keep **all map fields player-visible**, including token notes and combat notes. A token linked with `character_ref: "player"` reads name, HP, and conditions from the saved character sheet; change these through the character API or `character_changes`, rather than creating a second copy on the token.
+
+This is a positioning aid: moves do not calculate paths, prevent crossing walls or closed doors, spend movement, apply terrain damage, or adjudicate combat. There is no fog, line of sight, image generation, portrait token art, or freeform narrative parsing. The live AI chat loop remains a future milestone; structured map creation and updates already work through the backend.
 
 ### Private alignment memory
 
@@ -145,7 +194,7 @@ Before choosing the next scene, read `GET /api/campaigns/{id}/dm-context`. It in
 }
 ```
 
-The event, character patch, NPC changes, and milestone updates commit in one SQLite transaction. An invalid update rolls back the whole turn. Reuse the same idempotency key when retrying a network request; it cannot create a duplicate log event. Use existing NPC IDs from DM context when updating known characters. NPC patches preserve omitted fields and accumulate learned facts; newly learned facts link to the current event automatically. Explicitly supplied evidence must belong to this campaign. Only one phase is current at a time.
+The event, character patch, NPC changes, milestone updates, roll requests, and optional battle update commit in one SQLite transaction. An invalid update rolls back the whole turn. Reuse the same idempotency key when retrying a network request; it cannot create a duplicate log event. Use existing NPC IDs from DM context when updating known characters. NPC patches preserve omitted fields and accumulate learned facts; newly learned facts link to the current event automatically. Explicitly supplied evidence must belong to this campaign. Only one phase is current at a time.
 
 The UI's event form records manual story events through this same turn API. The live play/chat loop has not yet been implemented; automatic updates during future gameplay should use this contract rather than maintaining a second copy of the records.
 
@@ -160,6 +209,8 @@ The UI's event form records manual story events through this same turn API. The 
 | POST | `/api/campaigns/{id}/turns` | Atomically record a resolved turn |
 | POST | `/api/campaigns/{id}/rolls` | Request a player d20 button without rolling |
 | POST | `/api/campaigns/{id}/rolls/{roll_id}/roll` | Press once to roll; retries return the saved result |
+| GET / PUT / PATCH | `/api/campaigns/{id}/battle` | Read, replace, or patch structured tactical state with a required revision check |
+| POST | `/api/campaigns/{id}/battle/starter` | Create an outpost or empty grid using a revision check |
 | POST | `/api/campaigns/{id}/plan` | Queue a new outline; previous versions remain in history |
 | POST | `/api/campaigns/{id}/alignment/retry` | Retry unfinished private level-up reviews |
 | GET | `/api/campaigns/{id}/dm-context` | Private context to review before the next scene |

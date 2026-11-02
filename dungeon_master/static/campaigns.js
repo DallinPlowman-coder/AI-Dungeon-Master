@@ -57,6 +57,7 @@ function renderCharacter() {
     <details class="record-group"><summary>Saving throws &amp; skill training</summary><h3>Saving throw proficiencies</h3><div class="check-row">${abilities.map((ability) => `<label><input type="checkbox" data-save="${ability}" ${c.saving_throw_proficiencies.includes(ability) ? "checked" : ""}> ${title(ability)} (${bonus(d.saving_throws[ability])})</label>`).join("")}</div><h3>Skills</h3><div class="skill-grid">${skills.map((skill) => `<div class="skill-choice"><span>${skill} (${bonus(d.skills[skill])})</span><div><label><input type="checkbox" data-skill="${skill}" ${c.skill_proficiencies.includes(skill) ? "checked" : ""}> Trained</label><label><input type="checkbox" data-expertise="${skill}" ${c.skill_expertise.includes(skill) ? "checked" : ""}> Expert</label></div></div>`).join("")}</div></details>
     <details class="record-group"><summary>Spellcasting, equipment &amp; character details</summary><div class="form-grid"><label>Spellcasting ability<select name="spellcasting_ability"><option value="">None</option>${abilities.map((ability) => `<option value="${ability}" ${c.spellcasting_ability === ability ? "selected" : ""}>${title(ability)}</option>`).join("")}</select></label><label>Spell slots: level, total, used<textarea name="spell_slots" rows="3" placeholder="1, 4, 2">${c.spell_slots.map((slot) => `${slot.level}, ${slot.total}, ${slot.used}`).join("\n")}</textarea></label></div><div class="character-text-grid">${textFields.map((key) => `<label>${title(key)}<textarea name="${key}" rows="3" maxlength="12000">${esc(c[key])}</textarea></label>`).join("")}</div></details>`;
   if (typeof renderTableCharacter === "function") renderTableCharacter();
+  if (typeof renderBattle === "function") renderBattle();
 }
 function renderLog() {
   q("#event-list").innerHTML = current.events.length ? [...current.events].reverse().map((event) => `<article class="event-card"><span class="event-meta">SESSION ${event.session} · ${esc(event.kind.toUpperCase())} · ${esc(event.world_time || new Date(event.created_at).toLocaleString())}</span><h3>${esc(event.title)}</h3><p>${esc(event.summary)}</p>${event.details ? `<details><summary>Full scene / details</summary><p>${esc(event.details)}</p></details>` : ""}</article>`).join("")
@@ -249,7 +250,7 @@ async function poll() {
       if (next && next.updated_at !== current.updated_at) await loadCampaign(current.id);
     }
   } catch (error) { announce(`Campaign refresh failed. ${error.message}`, true); }
-  finally { polling = false; setTimeout(poll, ["queued", "reading", "synthesizing"].includes(current?.plan_status) || current?.rolls?.some((roll) => roll.status === "pending") ? 2000 : 7000); }
+  finally { polling = false; setTimeout(poll, ["queued", "reading", "synthesizing"].includes(current?.plan_status) || current?.rolls?.some((roll) => roll.status === "pending") || current?.battle?.state?.combat.active ? 2000 : 7000); }
 }
 (async () => {
   try { const campaigns = await refreshCampaignList(); if (campaigns.length) await loadCampaign(q("#active-campaign").value, true); else await showCreate(); }

@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from .battle_models import BattleChange
 
 
 Text = Annotated[str, Field(max_length=12000)]
@@ -165,6 +166,7 @@ class TurnUpdate(Record):
     npc_updates: list[NpcMemory] = Field(default_factory=list, max_length=50)
     phase_updates: list[PhaseUpdate] = Field(default_factory=list, max_length=50)
     roll_requests: list[RollRequest] = Field(default_factory=list, max_length=8)
+    battle_update: BattleChange | None = None
 
     @model_validator(mode="after")
     def one_current_phase(self):
