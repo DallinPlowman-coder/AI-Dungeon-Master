@@ -143,7 +143,8 @@ class AlignmentMemory:
     def finish(self, job, observations, model):
         with self.db.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            if db.execute("SELECT status FROM alignment_reviews WHERE id = ?", (job["id"],)).fetchone()[0] == "ready":
+            review = db.execute("SELECT status FROM alignment_reviews WHERE id = ?", (job["id"],)).fetchone()
+            if review is None or review[0] == "ready":
                 return
             state = dict(db.execute("SELECT * FROM character_alignment WHERE campaign_id = ?", (job["campaign_id"],)).fetchone())
             order = state["order_total"] + sum(item["order"] for item in observations)
@@ -215,6 +216,8 @@ class AlignmentTracking:
                         break
                     model = status["model"]
                     for batch in action_batches(events):
+                        if self.memory.next(campaign_id) is None:
+                            break
                         # Small local models copy short references more reliably than UUIDs.
                         references = {f"E{index}":event["event_id"] for index, event in enumerate(batch, 1)}
                         source = [{"event_ref":ref, **{key:value for key, value in event.items() if key != "event_id"}}
@@ -229,8 +232,9 @@ class AlignmentTracking:
                             observations.append({"event_id":references[item.event_ref], **item.model_dump(exclude={"event_ref"})})
                 self.memory.finish(job, observations, model)
             except Exception:
-                logger.exception("Private alignment review failed for %s", campaign_id)
-                self.memory.status(job["id"], "failed", "The local action review failed validation or could not finish. Previous alignment retained; retry when ready.")
+                if self.memory.next(campaign_id) is not None:
+                    logger.exception("Private alignment review failed for %s", campaign_id)
+                    self.memory.status(job["id"], "failed", "The local action review failed validation or could not finish. Previous alignment retained; retry when ready.")
                 break
             with self.lock:
                 job = self.memory.next(campaign_id)

@@ -19,6 +19,8 @@ Open **http://127.0.0.1:8000** for the game home screen. Choose a campaign save,
 
 **Campaign Docs** (`/campaign-docs`) groups character sheets, campaign logs, relationships, and the DM plan by campaign. Search by campaign or character name, open a specific document for editing, or download player documents as PDF, Markdown, or JSON. DM plans retain their explicit spoiler gate. Document and play links carry the campaign ID, so they open the intended save regardless of the last campaign selected in this browser.
 
+Choose **Delete** on a save card or campaign folio to remove a campaign. The confirmation names the campaign and explains that its character, log, NPC memory, plan/history, rolls, battle map, and private alignment records are permanently removed together. Uploaded books and their search indexes stay in Materials, and other saves are unaffected. The deleting browser also clears the campaign's artwork and map preference. A running local AI call may finish, but its result is discarded once the campaign is gone.
+
 ## Two source collections
 
 - **Rules:** rulebooks, combat and spell references, character options, and house rules.
@@ -207,6 +209,7 @@ The UI's event form records manual story events through this same turn API. The 
 | GET / POST | `/api/campaigns` | List or create campaigns; creation starts planning |
 | GET | `/api/campaigns/planner` | Check the configured local model |
 | GET | `/api/campaigns/{id}` | Player-safe campaign state |
+| DELETE | `/api/campaigns/{id}` | Permanently remove a campaign and its owned records; retain source books |
 | PUT | `/api/campaigns/{id}/character?expected_revision=0` | Save a character with an optional revision check |
 | POST | `/api/campaigns/{id}/events` | Append a standalone event |
 | PUT / GET | `/api/campaigns/{id}/npcs` / `npc-memories` | Save or inspect DM relationship memory |

@@ -38,6 +38,10 @@
 .save-card.recent-save { border-color:#a5855d; background:linear-gradient(125deg,#392831,#251c25); }
 .save-topline { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:20px; color:#b797a9; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; }
 .save-tag { letter-spacing:.8px; padding:4px 7px; border:1px solid #806446; border-radius:3px; color:#d5b987; font-size:7px; }
+.save-options { display:flex; align-items:center; justify-content:flex-end; gap:12px; }
+.campaign-delete-button { padding:6px 0; font-size:9px; color:#d1a09e; background:none; border:0; border-radius:2px; letter-spacing:0; text-transform:none; }
+.campaign-delete-button:hover { color:#ffcac3; }
+.folio-actions { margin-left:auto; display:flex; flex-wrap:wrap; align-items:center; gap:15px; }
 .save-identity { display:flex; gap:15px; align-items:center; margin-bottom:20px; }
 .save-emblem { display:grid; place-items:center; width:55px; height:62px; border:1px solid #755360; border-radius:7px 7px 19px 19px; background:#3d2935; flex-shrink:0; }
 .save-emblem img { width:30px; opacity:.8; }
@@ -82,7 +86,7 @@
 .folio-heading>div { min-width:0; }
 .folio-heading h2 { font:normal 25px Georgia,serif; margin:6px 0; overflow-wrap:anywhere; }
 .folio-heading p { margin:0; color:#b59aa9; font-size:10px; line-height:1.7; overflow-wrap:anywhere; }
-.folio-heading>a { margin-left:auto; flex-shrink:0; padding:10px 12px; font-size:10px; border:1px solid #775768; border-radius:5px; color:#d9c2cd; }
+.folio-actions>a { flex-shrink:0; padding:10px 12px; font-size:10px; border:1px solid #775768; border-radius:5px; color:#d9c2cd; }
 .folio-docs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
 .folio-document { padding:23px 19px; border-right:1px solid #4d3443; min-width:0; }
 .folio-document:last-child { border-right:0; }
@@ -101,6 +105,9 @@
 .new-save-dialog form>p { line-height:1.8; font-size:11px; }
 .new-save-actions { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-top:25px; }
 .new-save-actions>a { font-size:10px; }
+.delete-save-dialog strong { color:#f2dce2; overflow-wrap:anywhere; }
+.delete-save-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:12px; margin-top:27px; }
+.game-button-danger { background:#9b4948; border-color:#c2766d; color:#fff1e9; }
 .materials-content { max-width:1260px; padding-top:42px; }
 .materials-page .page-intro { margin-bottom:30px; }
 .materials-page .archive-seal { display:none; }

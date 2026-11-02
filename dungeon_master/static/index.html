@@ -45,5 +45,11 @@
     <p>Choose an adventure book. Your campaign gets its own character, journal, relationships, and battle map.</p>
     <form id="new-save-form"><label>Campaign name<input name="name" required maxlength="160" placeholder="Give this adventure a name…"></label><label>Campaign book<select name="source_book_id" required id="new-save-book"><option value="">Loading adventure books…</option></select></label><p id="new-save-help" class="muted" role="status"></p><div id="new-save-error" class="banner error" role="alert" hidden></div><div class="new-save-actions"><a href="/materials" class="text-link">Upload an adventure ↗</a><button type="submit" id="create-save" class="game-button" disabled>Create campaign <span aria-hidden="true">→</span></button></div></form>
   </dialog>
+  <dialog id="delete-save-dialog" class="new-save-dialog delete-save-dialog" aria-labelledby="delete-save-title" aria-describedby="delete-save-description">
+    <div class="dialog-top"><div><span class="eyebrow">REMOVE A SAVE FILE</span><h2 id="delete-save-title">Delete campaign?</h2></div></div>
+    <p id="delete-save-description">Permanently delete <strong id="delete-save-name"></strong> and its character sheet, story log, relationships, campaign plan, rolls, and battle map?</p>
+    <p>Uploaded books stay in Materials. This cannot be undone.</p>
+    <form id="delete-save-form"><div id="delete-save-error" class="banner error" role="alert" hidden></div><div class="delete-save-actions"><button type="button" id="cancel-delete-save" class="game-button game-button-outline" autofocus>Keep campaign</button><button type="submit" id="confirm-delete-save" class="game-button game-button-danger">Delete campaign</button></div></form>
+  </dialog>
 </body>
 </html>

@@ -82,6 +82,11 @@ class CampaignStore:
         with self.db.connect() as db:
             return self.decode(db.execute("SELECT * FROM campaigns WHERE id = ?", (campaign_id,)).fetchone())
 
+    def delete(self, campaign_id):
+        with self.db.connect() as db:
+            # Foreign keys remove only this save's records; source books remain in Materials.
+            return db.execute("DELETE FROM campaigns WHERE id = ?", (campaign_id,)).rowcount == 1
+
     def create(self, name, book):
         campaign_id, stamp = str(uuid.uuid4()), now()
         with self.db.connect() as db:

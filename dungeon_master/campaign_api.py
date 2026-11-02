@@ -46,6 +46,12 @@ def campaign_routes(library, store, planning, alignment):
         require(campaign_id)
         return store.snapshot(str(campaign_id))
 
+    @router.delete("/{campaign_id}")
+    def delete_campaign(campaign_id: uuid.UUID):
+        if not store.delete(str(campaign_id)):
+            raise HTTPException(404, "Campaign not found.")
+        return {"deleted":True, "id":str(campaign_id)}
+
     @router.put("/{campaign_id}/character")
     def save_character(campaign_id: uuid.UUID, payload: CharacterSheet, expected_revision: int | None = Query(None, ge=0)):
         campaign = require(campaign_id)

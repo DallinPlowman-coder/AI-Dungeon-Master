@@ -117,11 +117,13 @@ class CampaignPlanning:
 
     def _run(self, campaign_id):
         try:
+            campaign = self.store.get(campaign_id)
+            if campaign is None:
+                return
             status = self.provider.status()
             if not status["ready"]:
                 self.store.planning(campaign_id, plan_status="needs_setup", plan_detail=status["message"])
                 return
-            campaign = self.store.get(campaign_id)
             book = self.library.db.get_book(campaign["source_book_id"])
             if not book or book["collection"] != "campaign" or book["status"] != "ready" or self.library.describe(book)["needs_reindex"]:
                 raise PlanningError("The source adventure must be present in Campaigns and fully indexed before planning.")
@@ -135,6 +137,8 @@ class CampaignPlanning:
                                 plan_detail=f"Reading all {len(chunks)} passages in {len(batches)} sections")
             read = 0
             for index, batch in enumerate(batches):
+                if self.store.get(campaign_id) is None:
+                    return
                 material = "\n\n".join(f"[C{chunk['id']}] {chunk['source_label']}\n{chunk['text']}" for chunk in batch)
                 signature = hashlib.sha256(("plan-v1:" + self.library.settings.planning_model + material).encode()).hexdigest()
                 digest = self.store.reading(campaign_id, signature)
@@ -143,6 +147,8 @@ class CampaignPlanning:
                         "Read this complete section of an adventure. Summarize its established facts, hooks, "
                         "NPC motivations, prerequisites, and possible events. Do not add unsupported facts.",
                         material, ReadingDigest)
+                    if self.store.get(campaign_id) is None:
+                        return
                     self.store.reading(campaign_id, signature, digest)
                 digests.append({**digest, "source_ids":[f"C{chunk['id']}" for chunk in batch]})
                 read += len(batch)
@@ -163,6 +169,8 @@ class CampaignPlanning:
                 if group:
                     groups.append(group)
                 for group in groups:
+                    if self.store.get(campaign_id) is None:
+                        return
                     material = [{key:value for key, value in note.items() if key != "source_ids"} for note in group]
                     digest = self.provider.generate("Combine these section summaries without losing major hooks, "
                                                     "NPC agendas, prerequisites, or endings. Keep the summary concise.",
@@ -172,6 +180,8 @@ class CampaignPlanning:
                 if len(reduced) >= len(digests) and len(json.dumps(reduced)) >= len(json.dumps(digests)):
                     raise PlanningError("The source summaries could not be reduced to fit the local model.")
                 digests = reduced
+            if self.store.get(campaign_id) is None:
+                return
             self.store.planning(campaign_id, plan_status="synthesizing", plan_progress=80,
                                 plan_detail="Planning the full arc, branches, milestones, and endings")
             generated = self.provider.generate(
@@ -181,6 +191,8 @@ class CampaignPlanning:
                 "Cite only source_ids supplied in the notes. Label invented connective material as a proposal. "
                 "Do not force player choices or invent facts about the player character. Prefer 3–8 phases.",
                 json.dumps({"campaign":campaign["name"], "source":book["title"], "notes":digests}), GeneratedPlan)
+            if self.store.get(campaign_id) is None:
+                return
             for index, phase in enumerate(generated["phases"]):
                 if any(source not in source_ids for source in phase["source_ids"]):
                     raise PlanningError("The model cited a source that was not in the book. Retry planning.")
@@ -191,6 +203,8 @@ class CampaignPlanning:
                              coverage={"passages_read":read, "total_passages":len(chunks), "complete":read == len(chunks)})
             self.store.save_plan(campaign_id, generated)
         except Exception as exc:
+            if self.store.get(campaign_id) is None:
+                return
             logger.exception("Campaign planning failed: %s", campaign_id)
             self.store.planning(campaign_id, plan_status="failed",
                                 plan_detail="Planning stopped; previous plan, if any, is preserved",
