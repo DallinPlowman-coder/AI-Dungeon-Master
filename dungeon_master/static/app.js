@@ -25,7 +25,9 @@ async function api(url, options = {}) {
   return data;
 }
 function readyBooks(collection = $("#search-collection").value) {
-  return books.filter((book) => book.status === "ready" && !book.needs_reindex && (!collection || book.collection === collection));
+  const memberIds = typeof materialRuleSetBookIds === "function" ? materialRuleSetBookIds() : null;
+  return books.filter((book) => book.status === "ready" && !book.needs_reindex && (!collection || book.collection === collection)
+    && (memberIds === null || memberIds.includes(book.id)));
 }
 function renderSearchControls() {
   const ready = readyBooks(), selected = $("#search-book").value;
@@ -85,8 +87,10 @@ async function refresh() {
   if (refreshBusy) return;
   refreshBusy = true;
   try {
-    const data = await api("/api/books"), next = JSON.stringify(data.books);
+    const [data, groups] = await Promise.all([api("/api/books"), api("/api/rule-sets")]);
+    const next = JSON.stringify(data.books);
     books = data.books;
+    if (typeof receiveMaterialRuleSets === "function") receiveMaterialRuleSets(groups.rule_sets);
     if (next !== snapshot) { snapshot = next; renderBooks(); }
   } catch (error) { notice(`Cannot reach the library. ${error.message}`, true); }
   finally { refreshBusy = false; }
@@ -234,7 +238,7 @@ $("#search-form").addEventListener("submit", async (event) => {
   try {
     const data = await api("/api/retrieve", {
       method:"POST", headers:{"Content-Type":"application/json"}, signal:searchController.signal,
-      body:JSON.stringify({query, collection:$("#search-collection").value || null, book_id:$("#search-book").value || null, limit:5})
+      body:JSON.stringify({query, collection:$("#search-collection").value || null, book_id:$("#search-book").value || null, rule_set_id:$("#search-rule-set").value || null, limit:5})
     });
     if (version !== searchVersion) return;
     lastContext = data.context;

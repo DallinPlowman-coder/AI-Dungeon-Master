@@ -11,6 +11,7 @@ from .config import PIPELINE_VERSION, Settings
 from .database import ACTIVE_STATUSES, Database
 from .embeddings import LocalEmbeddings
 from .extraction import BookError, extract_book
+from .rulesets import RuleSetStore
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class Library:
         self.settings = settings
         self.db = Database(settings.data_dir / "library.sqlite3")
         self.embeddings = embeddings or LocalEmbeddings(settings)
+        self.rule_sets = RuleSetStore(self.db, self.embeddings.name)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="book-ingestion")
         self._pending = set()
         self._lock = threading.Lock()
@@ -115,14 +117,15 @@ class Library:
             with self._lock:
                 self._pending.discard(book_id)
 
-    def retrieve(self, query: str, book_id=None, limit=5, collection=None):
+    def retrieve(self, query: str, book_id=None, limit=5, collection=None, book_ids=None):
         ready = [book for book in self.db.list_books(collection) if book["status"] == "ready"
-                 and not self.describe(book)["needs_reindex"] and (book_id is None or book["id"] == book_id)]
+                 and not self.describe(book)["needs_reindex"] and (book_id is None or book["id"] == book_id)
+                 and (book_ids is None or book["id"] in book_ids)]
         if not ready:
             return {"query": query, "matches": [], "context": ""}
         vector = self.embeddings.query(query)
         best = []
-        for batch in self.db.vector_batches(self.embeddings.name, book_id, collection):
+        for batch in self.db.vector_batches(self.embeddings.name, book_id, collection, book_ids):
             matrix = np.stack([np.frombuffer(row["embedding"], dtype="<f4") for row in batch])
             scores = matrix @ vector
             for row, score in zip(batch, scores, strict=True):
@@ -135,7 +138,7 @@ class Library:
         terms = list(dict.fromkeys(re.findall(r"\w+", query, flags=re.UNICODE)))[:32]
         expression = " OR ".join('"' + term + '"' for term in terms)
         lexical = self.db.lexical_search(expression, self.embeddings.name, book_id,
-                                         collection=collection) if terms else []
+                                         collection=collection, book_ids=book_ids) if terms else []
         # Reciprocal rank fusion keeps exact game terms useful alongside semantic matches.
         candidates = {}
         for rank, (similarity, chunk_id, row) in enumerate(semantic, 1):

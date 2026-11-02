@@ -142,11 +142,13 @@ def test_processing_actions_are_guarded(tmp_path):
 def test_static_app_and_cross_origin_guard(client):
     response = client.get("/")
     assert response.status_code == 200 and "CHOOSE YOUR SAVE FILE" in response.text
+    assert response.headers["cache-control"] == "no-cache"
     assert client.get("/materials").status_code == 200
     assert "rules-input" in client.get("/materials").text
     assert "campaign-document-list" in client.get("/campaign-docs").text
     assert "default-src 'self'" in response.headers["content-security-policy"]
-    assert client.get("/static/app.js").status_code == 200
+    script = client.get("/static/app.js")
+    assert script.status_code == 200 and script.headers["cache-control"] == "no-cache"
     assert client.get("/docs").status_code == 200
     assert client.get("/openapi.json").status_code == 200
     assert client.post("/api/books", headers={"Origin":"https://example.com"}).status_code == 403

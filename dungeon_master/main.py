@@ -22,6 +22,7 @@ from .campaign_store import CampaignStore
 from .campaign_api import campaign_routes
 from .planning import CampaignPlanning
 from .alignment import AlignmentTracking
+from .rulesets import RuleSetInput, RuleSetEdit, RuleSetError, RuleSetConflict
 
 
 STATIC = Path(__file__).parent / "static"
@@ -58,6 +59,8 @@ class RetrievalRequest(BaseModel):
     query: str = Field(min_length=2, max_length=2000)
     book_id: uuid.UUID | None = None
     collection: BookCollection | None = None
+    rule_set_id: uuid.UUID | None = None
+    campaign_id: uuid.UUID | None = None
     limit: int = Field(default=5, ge=1, le=10)
 
     @field_validator("query")
@@ -76,7 +79,7 @@ class MoveBookRequest(BaseModel):
 def create_app(settings: Settings | None = None, embeddings=None, planning_provider=None):
     settings = settings or Settings.from_env()
     library = Library(settings, embeddings)
-    campaigns = CampaignStore(library.db)
+    campaigns = CampaignStore(library.db, library.rule_sets)
     planning = CampaignPlanning(library, campaigns, planning_provider)
     alignment = AlignmentTracking(campaigns.alignment, planning.provider)
 
@@ -118,6 +121,8 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
+        if request.url.path.startswith("/static/") or request.url.path in {"/", "/materials", "/campaigns", "/campaign-docs"}:
+            response.headers["Cache-Control"] = "no-cache"
         if request.url.path.startswith("/api/campaigns"):
             response.headers["Cache-Control"] = "no-store"
         response.headers["Content-Security-Policy"] = (
@@ -156,6 +161,34 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
     @app.get("/api/books")
     def list_books(collection: BookCollection | None = None):
         return {"books": [library.describe(book) for book in library.db.list_books(collection)]}
+
+    @app.get("/api/rule-sets")
+    def list_rule_sets():
+        return {"rule_sets":library.rule_sets.list()}
+
+    @app.get("/api/rule-sets/{rule_set_id}")
+    def get_rule_set(rule_set_id: uuid.UUID):
+        group = library.rule_sets.get(str(rule_set_id))
+        if group is None:
+            raise HTTPException(404, "Rulebook set not found.")
+        return group
+
+    def save_rule_set(payload, rule_set_id=None):
+        try:
+            return library.rule_sets.save(payload, rule_set_id)
+        except RuleSetConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except RuleSetError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.post("/api/rule-sets", status_code=201)
+    def create_rule_set(payload: RuleSetInput):
+        return save_rule_set(payload)
+
+    @app.put("/api/rule-sets/{rule_set_id}")
+    def update_rule_set(rule_set_id: uuid.UUID, payload: RuleSetEdit):
+        get_rule_set(rule_set_id)
+        return save_rule_set(payload, str(rule_set_id))
 
     @app.get("/api/books/{book_id}")
     def get_book(book_id: uuid.UUID):
@@ -240,15 +273,40 @@ def create_app(settings: Settings | None = None, embeddings=None, planning_provi
 
     @app.post("/api/retrieve")
     def retrieve(payload: RetrievalRequest):
+        scope_collection = payload.collection or ("rules" if payload.rule_set_id else None)
+        if payload.rule_set_id and payload.campaign_id:
+            raise HTTPException(400, "Choose a rulebook set or a campaign scope, not both.")
+        book_ids = None
+        if payload.rule_set_id or payload.campaign_id:
+            book_ids = []
+            selected = str(payload.rule_set_id) if payload.rule_set_id else None
+            if payload.campaign_id:
+                campaign = campaigns.get(str(payload.campaign_id))
+                if campaign is None:
+                    raise HTTPException(404, "Campaign not found.")
+                selected = campaign["rule_set_id"]
+                if payload.collection != "rules" and campaign["source_book_id"]:
+                    source = library.db.get_book(campaign["source_book_id"])
+                    if source and source["collection"] == "campaign":
+                        book_ids.append(source["id"])
+            elif payload.collection == "campaign":
+                raise HTTPException(400, "Rulebook sets contain only Rules books.")
+            if selected and payload.collection != "campaign":
+                group = get_rule_set(uuid.UUID(selected))
+                if not group["ready"]:
+                    raise HTTPException(409, "This rulebook set has unavailable books. Finish indexing or update the set in Materials.")
+                book_ids.extend(group["book_ids"])
         if payload.book_id:
             book = find_book(payload.book_id)
-            if payload.collection and book["collection"] != payload.collection:
+            if scope_collection and book["collection"] != scope_collection:
                 raise HTTPException(400, "The selected book is not in the selected collection.")
             if book["status"] != "ready" or library.describe(book)["needs_reindex"]:
                 raise HTTPException(409, "This book must finish indexing before it can be searched.")
+            if book_ids is not None and str(payload.book_id) not in book_ids:
+                raise HTTPException(400, "That book is not in the selected rulebook set or campaign.")
         try:
             return library.retrieve(payload.query, str(payload.book_id) if payload.book_id else None,
-                                    payload.limit, payload.collection)
+                                    payload.limit, scope_collection, book_ids=book_ids)
         except Exception as exc:
             logger.exception("Retrieval failed")
             raise HTTPException(503, "Search is temporarily unavailable. Check the server log and try again.") from exc

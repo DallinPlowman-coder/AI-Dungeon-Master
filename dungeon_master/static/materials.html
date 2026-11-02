@@ -9,7 +9,9 @@
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/home.css">
-  <script src="/static/app.js" defer></script>
+  <link rel="stylesheet" href="/static/rulesets.css">
+  <script src="/static/app.js?v=rule-sets-1" defer></script>
+  <script src="/static/material-rules.js" defer></script>
 </head>
 <body class="portal-page materials-page">
   <header class="portal-header">
@@ -21,6 +23,7 @@
     <div class="content materials-content">
       <div class="page-intro"><div><div class="eyebrow">PREPARE YOUR NEXT ADVENTURE</div><h1>Upload materials<span>.</span></h1><p>Your rulebooks and adventure books, ready for the Dungeon Master.</p></div><div class="archive-seal" aria-hidden="true">✦</div></div>
       <div class="banner" id="notice" role="status" hidden></div>
+      <section class="rule-sets-section" id="rule-sets" aria-labelledby="rule-sets-title"><div class="section-heading"><div><span class="section-index">RULEBOOKS THAT PLAY TOGETHER</span><h2 id="rule-sets-title">Rulebook sets</h2></div><button type="button" id="new-rule-set" class="secondary-button">＋ Create a set</button></div><p>Group your rulebooks into one named choice for a campaign. A book can belong to more than one set.</p><div id="rule-set-list" class="rule-set-list" aria-live="polite">Loading your sets…</div></section>
       <div class="collection-grid">
         <section class="collection-card" id="rules-library" aria-labelledby="rules-title">
           <div class="section-heading"><div><span class="section-index">01 / HOW THE GAME WORKS</span><h2 id="rules-title">Rules <span class="count" id="rules-count">0</span></h2></div><span class="collection-emblem" aria-hidden="true">⚖</span></div>
@@ -43,12 +46,13 @@
       </div>
       <section class="retrieval-section" aria-labelledby="search-title"><div class="section-heading"><div><span class="section-index">03 / EXPLORE THE KNOWLEDGE</span><h2 id="search-title">Find a passage</h2></div><span class="small-tag">SOURCE SEARCH</span></div><p class="search-description">Try a rule, a place, or a story idea. See the passages your DM could draw from, with their sources.</p>
         <form id="search-form"><div class="search-controls"><label class="sr-only" for="search-query">Question or search terms</label><input id="search-query" placeholder="What lurks in the ruins beneath the old city?" minlength="2" maxlength="2000" required><label class="sr-only" for="search-collection">Search collection</label><select id="search-collection"><option value="">Rules + Campaigns</option><option value="rules">Rules only</option><option value="campaign">Campaigns only</option></select><label class="sr-only" for="search-book">Search in book</label><select id="search-book"><option value="">All ready books</option></select><button type="submit" class="primary-button" id="search-button" disabled>Search archive <span aria-hidden="true">↗</span></button></div></form>
-        <div class="search-status muted" id="search-status" role="status">Your books will be searchable once indexing is complete.</div>
+        <div class="rule-search-choice"><label for="search-rule-set">Rulebook set</label><select id="search-rule-set"><option value="">All books in the selected collection</option></select><span>Choose a set to search its rulebooks together.</span></div><div class="search-status muted" id="search-status" role="status">Your books will be searchable once indexing is complete.</div>
         <div id="search-results"></div><div class="context-actions" id="context-actions" hidden><span class="muted">Retrieved excerpts, ready for the future DM.</span><button id="copy-context" class="secondary-button">Copy source context</button></div>
       </section>
       <footer><span>AI DUNGEON MASTER</span><span>A little lore goes a long way.</span><a href="https://github.com/DallinPlowman-coder/AI-Dungeon-Master" target="_blank" rel="noopener">Project ↗</a></footer>
     </div>
   </main>
   <dialog id="passage-dialog"><div class="dialog-top"><div><div class="eyebrow">INSIDE THE BOOK</div><h2 id="passage-title">Passages</h2></div><button class="icon-button" id="close-passages" aria-label="Close passages">×</button></div><div id="passage-list"></div><div class="pagination"><button class="secondary-button" id="previous-passages">← Previous</button><span id="passage-range" class="muted"></span><button class="secondary-button" id="next-passages">Next →</button></div></dialog>
+  <dialog id="rule-set-dialog" class="rule-set-dialog" aria-labelledby="rule-set-dialog-title"><div class="dialog-top"><h2 id="rule-set-dialog-title">Create a rulebook set</h2><button type="button" id="close-rule-set" class="icon-button" aria-label="Close rulebook set editor">×</button></div><p>Give this set a name and choose the indexed rulebooks it includes. Changes apply to every campaign using this set.</p><form id="rule-set-form"><label class="rule-name-label">Set name<input name="name" maxlength="160" required placeholder="Core rules + house rules"></label><fieldset><legend>Include rulebooks</legend><div id="rule-set-books" class="rule-set-books"></div></fieldset><p id="rule-set-error" class="rule-error" role="alert" hidden></p><div class="rule-set-form-actions"><a href="#rules-library" id="rule-set-upload-link" class="text-link">Upload more rulebooks ↗</a><button type="submit" id="save-rule-set" class="primary-button">Save set</button></div></form></dialog>
 </body>
 </html>

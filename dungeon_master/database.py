@@ -83,6 +83,18 @@ class Database:
             if "collection" not in {row["name"] for row in db.execute("PRAGMA table_info(books)")}:
                 self._migrate_collections(db)
             db.execute("CREATE INDEX IF NOT EXISTS books_collection ON books(collection, status)")
+            db.executescript("""
+                CREATE TABLE IF NOT EXISTS rule_sets (
+                    id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    revision INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS rule_set_books (
+                    rule_set_id TEXT NOT NULL REFERENCES rule_sets(id) ON DELETE CASCADE,
+                    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                    position INTEGER NOT NULL, PRIMARY KEY(rule_set_id, book_id)
+                );
+                CREATE INDEX IF NOT EXISTS rule_set_members_book ON rule_set_books(book_id);
+            """)
 
     def _migrate_collections(self, db):
         # Keep passages, vectors, IDs, and FTS rows intact while replacing the old
@@ -144,9 +156,20 @@ class Database:
 
     def move_book(self, book_id, collection):
         with self.connect() as db:
-            return db.execute("""UPDATE books SET collection = ?, updated_at = ?
+            moved = db.execute("""UPDATE books SET collection = ?, updated_at = ?
                 WHERE id = ? AND status IN ('ready', 'failed')""",
                 (collection, now(), book_id)).rowcount == 1
+            if moved:
+                self._touch_rule_sets(db, book_id)
+            return moved
+
+    @staticmethod
+    def _touch_rule_sets(db, book_id):
+        # Older libraries can be indexed before their first schema upgrade.
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rule_sets'").fetchone() is None:
+            return
+        db.execute("""UPDATE rule_sets SET revision = revision + 1, updated_at = ?
+            WHERE id IN (SELECT rule_set_id FROM rule_set_books WHERE book_id = ?)""", (now(), book_id))
 
     def update_book(self, book_id, **values):
         allowed = {"status", "progress", "stage_detail", "page_count", "character_count",
@@ -159,12 +182,16 @@ class Database:
         with self.connect() as db:
             db.execute(f"UPDATE books SET {', '.join(key + ' = ?' for key in values)} WHERE id = ?",
                        (*values.values(), book_id))
+            if {"status", "embedding_model", "pipeline_version"} & values.keys():
+                self._touch_rule_sets(db, book_id)
 
     def queue_again(self, book_id):
         with self.connect() as db:
             cursor = db.execute("""UPDATE books SET status = 'queued', progress = 0,
                 error = NULL, stage_detail = 'Waiting to be processed', updated_at = ?
                 WHERE id = ? AND status IN ('ready', 'failed')""", (now(), book_id))
+            if cursor.rowcount == 1:
+                self._touch_rule_sets(db, book_id)
             return cursor.rowcount == 1
 
     def save_index(self, book_id, chunks, vectors, model):
@@ -181,9 +208,12 @@ class Database:
                 stage_detail = 'Ready for retrieval', chunk_count = ?, embedding_model = ?,
                 pipeline_version = ?, error = NULL, updated_at = ? WHERE id = ?""",
                 (len(chunks), model, PIPELINE_VERSION, now(), book_id))
+            self._touch_rule_sets(db, book_id)
 
     def delete_book(self, book_id):
         with self.connect() as db:
+            if db.execute("SELECT 1 FROM books WHERE id = ? AND status IN ('ready', 'failed')", (book_id,)).fetchone():
+                self._touch_rule_sets(db, book_id)
             return db.execute("DELETE FROM books WHERE id = ? AND status IN ('ready', 'failed')",
                               (book_id,)).rowcount == 1
 
@@ -193,21 +223,22 @@ class Database:
                 token_count FROM chunks WHERE book_id = ? ORDER BY ordinal LIMIT ? OFFSET ?""",
                 (book_id, limit, offset))]
 
-    def vector_batches(self, model, book_id=None, collection=None):
+    def vector_batches(self, model, book_id=None, collection=None, book_ids=None):
+        scope = "" if book_ids is None else " AND b.id IN (" + ",".join("?" for _ in book_ids) + ")" if book_ids else " AND 0"
         with self.connect() as db:
             cursor = db.execute("""SELECT c.*, b.title, b.collection FROM chunks c JOIN books b ON b.id = c.book_id
                 WHERE b.status = 'ready' AND b.embedding_model = ? AND b.pipeline_version = ?
-                AND (? IS NULL OR b.id = ?) AND (? IS NULL OR b.collection = ?)""",
-                (model, PIPELINE_VERSION, book_id, book_id, collection, collection))
+                AND (? IS NULL OR b.id = ?) AND (? IS NULL OR b.collection = ?)""" + scope,
+                (model, PIPELINE_VERSION, book_id, book_id, collection, collection, *(book_ids or [])))
             while rows := cursor.fetchmany(256):
                 yield rows
 
-    def lexical_search(self, expression, model, book_id=None, limit=40, collection=None):
+    def lexical_search(self, expression, model, book_id=None, limit=40, collection=None, book_ids=None):
+        scope = "" if book_ids is None else " AND b.id IN (" + ",".join("?" for _ in book_ids) + ")" if book_ids else " AND 0"
         with self.connect() as db:
             return [dict(row) for row in db.execute("""SELECT c.*, b.title, b.collection FROM chunks_fts
                 JOIN chunks c ON c.id = chunks_fts.rowid JOIN books b ON b.id = c.book_id
                 WHERE chunks_fts MATCH ? AND b.status = 'ready'
                 AND b.embedding_model = ? AND b.pipeline_version = ?
-                AND (? IS NULL OR b.id = ?) AND (? IS NULL OR b.collection = ?)
-                ORDER BY bm25(chunks_fts) LIMIT ?""",
-                (expression, model, PIPELINE_VERSION, book_id, book_id, collection, collection, limit))]
+                AND (? IS NULL OR b.id = ?) AND (? IS NULL OR b.collection = ?)""" + scope + " ORDER BY bm25(chunks_fts) LIMIT ?",
+                (expression, model, PIPELINE_VERSION, book_id, book_id, collection, collection, *(book_ids or []), limit))]

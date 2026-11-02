@@ -78,6 +78,7 @@ function renderTable() {
   renderTableCharacter();
   if (typeof renderDice === "function") renderDice();
   if (typeof renderBattle === "function") renderBattle();
+  if (typeof renderCampaignRules === "function") renderCampaignRules();
   const key = current.events.map((event) => event.id).join(",");
   if (key === tableFeedKey) return;
   const feed = q("#story-feed"), follow = tableFeedKey === null || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;

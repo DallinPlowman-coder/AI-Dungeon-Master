@@ -9,6 +9,7 @@ from .document_exports import json_document, markdown_document, pdf_document
 from .dice import RollConflict, RollNotFound
 from .battle import BattleConflict, BattleError, starter_state
 from .battle_models import BattleChange, BattleStarter
+from .rulesets import RuleSetSelection, RuleSetError, RuleSetConflict
 from .records import CharacterSheet, CreateCampaign, NpcMemory, RollPress, RollRequest, StoryEvent, TurnUpdate
 
 
@@ -35,7 +36,11 @@ def campaign_routes(library, store, planning, alignment):
         if not book or book["collection"] != "campaign" or book["status"] != "ready" or library.describe(book)["needs_reindex"]:
             raise HTTPException(409, "Choose a fully indexed book from the Campaigns library.")
         try:
-            campaign_id = store.create(payload.name.strip(), book)
+            campaign_id = store.create(payload.name.strip(), book, str(payload.rule_set_id) if payload.rule_set_id else None)
+        except RuleSetConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except RuleSetError as exc:
+            raise HTTPException(422, str(exc)) from exc
         except sqlite3.IntegrityError as exc:
             raise HTTPException(409, "The source book changed. Choose an indexed adventure again.") from exc
         planning.submit(campaign_id)
@@ -51,6 +56,17 @@ def campaign_routes(library, store, planning, alignment):
         if not store.delete(str(campaign_id)):
             raise HTTPException(404, "Campaign not found.")
         return {"deleted":True, "id":str(campaign_id)}
+
+    @router.put("/{campaign_id}/rules")
+    def select_rule_set(campaign_id: uuid.UUID, payload: RuleSetSelection):
+        require(campaign_id)
+        try:
+            store.select_rules(str(campaign_id), payload)
+        except RuleSetConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except RuleSetError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return store.snapshot(str(campaign_id))
 
     @router.put("/{campaign_id}/character")
     def save_character(campaign_id: uuid.UUID, payload: CharacterSheet, expected_revision: int | None = Query(None, ge=0)):
@@ -149,9 +165,14 @@ def campaign_routes(library, store, planning, alignment):
         context["next_phases"] = [phase for phase in phases if phase["status"] == "active"] or [
             phase for phase in phases if phase["status"] == "planned"][:1]
         context["ready_for_play"] = context["plan"] is not None
+        context["retrieval_scope"] = {"campaign_id":str(campaign_id)}
         context["memory_instruction"] = (
             "If the plan is missing, finish campaign planning before starting play. "
             "Review character, full campaign log, and current plan before choosing the next scene. "
+            "The rule_set field identifies this campaign's chosen rulebook set and its member books. "
+            "Retrieve references through /api/retrieve with this campaign_id so only its adventure and selected "
+            "rules are searched. Never substitute other uploaded rulebooks. If no set is selected, ask the player "
+            "to choose one before resolving rules-dependent actions. If a selected set is not ready, ask for its books to be repaired. "
             "Treat the plan as possibilities, and the log as events that actually happened. "
             "Verify established facts against the source adventure; generated alternatives are proposals, not book canon. "
             "NPCs may use only their own recorded knowledge and witnessed events. "

@@ -178,6 +178,7 @@ class TurnUpdate(Record):
 class CreateCampaign(Record):
     name: Annotated[str, Field(min_length=1, max_length=160)]
     source_book_id: UUID
+    rule_set_id: UUID | None = None
 
 
 class ReadingDigest(Record):

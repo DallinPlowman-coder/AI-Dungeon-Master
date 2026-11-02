@@ -4,12 +4,14 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#171419">
   <title>The Chronicle · AI Dungeon Master</title>
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/campaigns.css">
-  <script src="/static/campaigns.js" defer></script>
-  <script src="/static/table.js" defer></script>
+  <script src="/static/campaigns.js?v=rule-sets-1" defer></script>
+  <script src="/static/table.js?v=rule-sets-1" defer></script>
   <script src="/static/dice.js" defer></script>
   <link rel="stylesheet" href="/static/battle-map.css">
+  <link rel="stylesheet" href="/static/rulesets.css">
   <script src="/static/battle-map.js" defer></script>
   <script src="/static/battle.js" defer></script>
+  <script src="/static/campaign-rules.js" defer></script>
 </head>
 <body class="tabletop-page">
   <main class="table-main">
@@ -23,7 +25,7 @@
       <section class="new-campaign-panel record-panel" id="create-panel" aria-labelledby="create-title" hidden>
         <div class="eyebrow">BEGIN WITH AN ADVENTURE</div><h2 id="create-title">Start a campaign</h2>
         <p>Choose an indexed adventure. Your local AI will read the entire book and prepare its campaign plan while you set up your character.</p>
-        <form id="create-campaign-form" class="record-form"><div class="form-grid"><label>Campaign name<input name="name" required maxlength="160" placeholder="Our adventure in Briarwell"></label><label>Campaign book<select name="source_book_id" id="campaign-book" required><option value="">Choose an indexed adventure</option></select></label></div><p id="planner-status" class="muted form-help" role="status">Checking the local planner…</p><div class="form-actions"><button type="submit" class="primary-button">Create campaign &amp; plan</button><button type="button" id="cancel-create" class="secondary-button">Cancel</button></div></form>
+        <form id="create-campaign-form" class="record-form"><div class="form-grid"><label>Campaign name<input name="name" required maxlength="160" placeholder="Our adventure in Briarwell"></label><label>Campaign book<select name="source_book_id" id="campaign-book" required><option value="">Choose an indexed adventure</option></select></label><label>Rulebook set<select name="rule_set_id" id="new-campaign-rules"><option value="">No rulebook set selected</option></select></label></div><p id="planner-status" class="muted form-help" role="status">Checking the local planner…</p><div class="form-actions"><button type="submit" class="primary-button">Create campaign &amp; plan</button><button type="button" id="cancel-create" class="secondary-button">Cancel</button></div></form>
       </section>
       <div id="campaign-empty" class="record-panel campaign-empty"><span class="empty-book" aria-hidden="true">✧</span><h2>Give the adventure a place to live.</h2><p>Create a campaign from an uploaded book to start your character sheet, story log, and relationship records.</p><a href="/materials" class="text-link">Upload an adventure in Materials ↗</a></div>
       <div id="campaign-workspace" hidden>
@@ -47,6 +49,7 @@
           </section>
           <aside class="character-rail" aria-label="Character sidebar">
             <button class="docs-button" id="open-docs" type="button"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H4Zm16 0h-4a3 3 0 0 0-3 3v14a4 4 0 0 1 4-2h3Z"/></svg> Campaign docs</span><span aria-hidden="true">↗</span></button>
+            <button type="button" class="campaign-rule-button" data-open-rules aria-label="Choose campaign rulebook set"><span><small>Rulebook set</small><strong id="campaign-rule-set-name">No set selected</strong></span><span aria-hidden="true">↗</span></button>
             <div class="character-rail-body" tabindex="0" role="region" aria-label="Character stats and equipment">
             <section class="rail-character"><div class="portrait-wrap"><label for="portrait-file" class="portrait-picker" title="Choose a character portrait; saved in this browser"><span id="portrait-initials" aria-hidden="true">✧</span><img id="character-portrait" alt="Character portrait" hidden><span class="portrait-edit" aria-hidden="true">+</span><span class="sr-only">Choose character portrait</span></label><input type="file" id="portrait-file" class="sr-only" accept="image/png,image/jpeg,image/webp"><button type="button" id="remove-portrait" class="portrait-remove" hidden>Remove portrait</button></div><button type="button" class="character-name-button" data-open-doc="character"><h2 id="rail-name">Your character</h2><span aria-hidden="true">↗</span></button><p id="rail-identity" class="rail-identity"></p><div class="vital-stats" id="rail-vitals"></div><div id="rail-conditions" class="rail-conditions" hidden></div></section>
             <section class="rail-section"><div class="rail-section-heading"><h3>Ability scores</h3><button type="button" class="rail-edit" data-open-doc="character">Edit</button></div><div class="ability-labels" aria-hidden="true"><span>Ability</span><span>Score</span><span>Mod</span></div><div id="rail-abilities"></div><div class="proficiency-heading"><h3>Proficient skills</h3><span id="rail-proficiency"></span></div><div class="rail-skills" id="rail-skills"></div></section>
@@ -56,7 +59,7 @@
           </aside>
         </div>
         <dialog id="records-dialog" class="records-dialog" aria-labelledby="records-title">
-          <div class="records-dialog-heading"><div><span class="section-index">YOUR CAMPAIGN RECORDS</span><h2 id="records-title">The folio.</h2></div><button type="button" id="close-docs" class="icon-button" aria-label="Close campaign docs">×</button></div>
+          <div class="records-dialog-heading"><div><span class="section-index">YOUR CAMPAIGN RECORDS</span><h2 id="records-title">The folio.</h2></div><button type="button" data-open-rules class="secondary-button campaign-rules-doc-button">Rulebook set</button><button type="button" id="close-docs" class="icon-button" aria-label="Close campaign docs">×</button></div>
           <div id="records-notice" class="banner" role="status" hidden></div>
         <div class="record-tabs" role="tablist" aria-label="Campaign documents">
           <button role="tab" id="tab-character" aria-controls="panel-character" aria-selected="true" data-tab="character">Character sheet</button>
@@ -70,6 +73,7 @@
         <section id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" hidden><div class="document-heading"><div><span class="section-index">04 / THE DM'S ROADMAP</span><h2>Campaign plan</h2><p>The full adventure arc, branches, and milestones for choosing what comes next.</p></div></div><div id="dm-gate" class="record-panel spoiler-gate"><span class="collection-emblem" aria-hidden="true">◇</span><h3>DM workspace · future story spoilers</h3><p>This plan is kept separate from player records. Opening it reveals hidden scenes, motives, and possible endings.</p><button id="reveal-dm" class="secondary-button">Reveal DM workspace</button></div><div id="dm-workspace" hidden><div class="dm-toolbar"><span class="small-tag">DM ONLY · SPOILERS</span><div class="download-links" data-document="plan"></div><button id="retry-plan" class="secondary-button">Generate a new plan</button></div><div id="plan-status" class="record-panel" role="status"></div><div id="plan-content"></div><details class="record-panel"><summary>Private character notes</summary><form id="dm-character-form" class="record-form"><label>Details known only to the DM<textarea name="dm_notes" id="dm-character-notes" maxlength="12000" rows="4"></textarea></label><button type="submit" class="secondary-button">Save private notes</button></form></details><details class="record-panel"><summary>Full DM context · includes hidden log entries</summary><p class="muted form-help">The AI reviews this saved state before the next scene. The plan describes possibilities; the log records actual events.</p><pre id="dm-context-preview" class="context-preview"></pre><a id="dm-context-download" class="secondary-button" download>Download DM context (JSON)</a></details></div></section>
         </dialog>
       </div>
+      <dialog id="campaign-rules-dialog" class="rule-set-dialog" aria-labelledby="campaign-rules-title"><div class="dialog-top"><h2 id="campaign-rules-title">Choose a rulebook set</h2><button type="button" id="close-campaign-rules" class="icon-button" aria-label="Close rulebook selector">×</button></div><p id="campaign-rules-for"></p><form id="campaign-rules-form"><label class="rule-name-label">Rulebook set<select id="campaign-rules-choice"><option value="">No rulebook set selected</option></select></label><p id="campaign-rule-books" class="rule-choice-summary"></p><p id="campaign-rules-error" class="rule-error" role="alert" hidden></p><div class="rule-set-form-actions"><a href="/materials#rule-sets" class="text-link">Manage rulebook sets ↗</a><button type="submit" id="save-campaign-rules" class="primary-button">Use this set</button></div></form></dialog>
       <dialog id="dice-dialog" class="dice-dialog" aria-labelledby="dice-title">
         <div class="dice-dialog-top"><span class="section-index">THE DICE HAVE A SAY</span><button type="button" id="close-dice" class="icon-button" aria-label="Close dice result">×</button></div>
         <h2 id="dice-title">Roll a d20</h2><p id="dice-reason" class="dice-reason"></p>

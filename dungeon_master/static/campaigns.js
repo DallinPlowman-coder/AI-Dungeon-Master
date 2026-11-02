@@ -101,10 +101,11 @@ async function refreshCampaignList() {
   return data.campaigns;
 }
 async function refreshBooks() {
-  const data = await request("/api/books?collection=campaign");
+  const [data, {rule_sets}] = await Promise.all([request("/api/books?collection=campaign"), request("/api/rule-sets")]);
   const ready = data.books.filter((book) => book.status === "ready" && !book.needs_reindex);
   q("#campaign-book").innerHTML = '<option value="">Choose an indexed adventure</option>' + ready.map((book) => `<option value="${book.id}">${esc(book.title)}</option>`).join("");
   q("#create-campaign-form button[type=submit]").disabled = !ready.length;
+  q("#new-campaign-rules").innerHTML = '<option value="">No rulebook set selected</option>' + rule_sets.map((group) => `<option value="${group.id}" ${group.ready ? "" : "disabled"}>${esc(group.name)} · ${group.book_ids.length} books${group.ready ? "" : " · needs attention"}</option>`).join("");
   if (!ready.length) q("#planner-status").textContent = "Upload and index an adventure in the Campaigns library first.";
   else {
     const status = await request("/api/campaigns/planner");
@@ -117,7 +118,9 @@ q("#cancel-create").addEventListener("click", () => q("#create-panel").hidden = 
 q("#create-campaign-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const button = event.submitter; button.disabled = true;
   try {
-    const form = new FormData(event.target), campaign = await write("/api/campaigns", Object.fromEntries(form));
+    const values = Object.fromEntries(new FormData(event.target));
+    values.rule_set_id ||= null;
+    const campaign = await write("/api/campaigns", values);
     q("#create-panel").hidden = true; event.target.reset();
     await refreshCampaignList(); q("#active-campaign").value = campaign.id;
     await loadCampaign(campaign.id, true); switchTab("character");
@@ -255,7 +258,7 @@ async function poll() {
   try {
     if (current) {
       const list = await request("/api/campaigns"), next = list.campaigns.find((item) => item.id === current.id);
-      if (next && next.updated_at !== current.updated_at) await loadCampaign(current.id);
+      if (next && (next.updated_at !== current.updated_at || next.rule_set_revision !== (current.rule_set?.revision ?? null))) await loadCampaign(current.id);
     }
   } catch (error) { announce(`Campaign refresh failed. ${error.message}`, true); }
   finally { polling = false; setTimeout(poll, ["queued", "reading", "synthesizing"].includes(current?.plan_status) || current?.rolls?.some((roll) => roll.status === "pending") || current?.battle?.state?.combat.active ? 2000 : 7000); }

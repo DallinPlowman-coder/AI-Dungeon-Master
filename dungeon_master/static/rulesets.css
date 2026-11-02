@@ -1,0 +1,38 @@
+.rule-sets-section { border:1px solid #604451; border-radius:9px; padding:25px; background:#281d27; margin-bottom:28px; scroll-margin-top:25px; }
+.rule-sets-section h2 { font:27px Georgia,serif; margin:9px 0 0; }
+.rule-sets-section>p { font-size:12px; line-height:1.8; color:var(--muted); margin:16px 0 21px; }
+.rule-set-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+.rule-set-card { min-width:0; background:#201820; border:1px solid #563c4c; border-radius:6px; padding:19px; }
+.rule-set-card h3 { font:22px/1.4 Georgia,serif; margin:0 0 5px; overflow-wrap:anywhere; }
+.rule-set-status { color:#c3a97e; font-size:9px; }
+.rule-set-card ul { padding-left:18px; margin:17px 0; color:#bca5b3; font-size:11px; line-height:1.9; overflow-wrap:anywhere; }
+.rule-set-card-actions,.rule-set-form-actions { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.rule-set-card-actions { border-top:1px solid #4e3645; padding-top:13px; }
+.rule-set-empty { grid-column:1/-1; border:1px dashed #735363; color:#baa0b1; padding:22px; border-radius:6px; font-size:11px; line-height:1.8; }
+.rule-search-choice { display:flex; align-items:center; gap:13px; margin-top:17px; flex-wrap:wrap; font-size:10px; color:#bea6b5; }
+.rule-search-choice select,.rule-set-dialog input:not([type=checkbox]),.rule-set-dialog select { color:var(--text); background:#211922; border:1px solid #705166; border-radius:5px; padding:11px 12px; font:12px ui-sans-serif,system-ui; min-width:0; }
+.rule-search-choice select { max-width:100%; }
+.rule-search-choice>span { color:#a38b9d; font-size:9px; }
+.rule-set-dialog { width:min(570px,calc(100% - 30px)); padding:27px; background:#241b24; }
+.rule-set-dialog .dialog-top { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:18px; }
+.rule-set-dialog h2 { font:29px/1.25 Georgia,serif; margin:0; }
+.rule-set-dialog>p { font-size:12px; line-height:1.9; color:var(--muted); margin:18px 0; }
+.rule-name-label { display:flex; flex-direction:column; gap:9px; font-size:11px; color:#dcc6d4; margin-bottom:22px; }
+.rule-set-dialog fieldset { border:1px solid #634555; border-radius:6px; padding:8px 15px; margin:0 0 23px; min-width:0; }
+.rule-set-dialog legend { font-size:10px; color:#cdb388; padding:0 8px; }
+.rule-set-books { max-height:300px; overflow:auto; }
+.rule-book-choice { display:flex; gap:12px; align-items:flex-start; font-size:12px; color:#e5d0db; padding:14px 0; border-bottom:1px solid #49323f; cursor:pointer; overflow-wrap:anywhere; }
+.rule-book-choice:last-child { border:0; }
+.rule-book-choice input { accent-color:var(--gold); margin-top:3px; flex-shrink:0; }
+.rule-book-choice small { display:block; font-size:9px; color:#a78d9e; margin-top:6px; line-height:1.7; }
+.rule-error { color:#efb0a2!important; font-size:11px; line-height:1.8; }
+.rule-set-form-actions>a { font-size:10px; }
+.campaign-rule-button { flex-shrink:0; display:flex; width:100%; justify-content:space-between; align-items:center; gap:10px; border:0; border-bottom:1px solid #4f3646; padding:13px 20px; background:#251b25; color:#cdb487; text-align:left; }
+.campaign-rule-button small { display:block; color:#a88c9f; font-size:7px; text-transform:uppercase; letter-spacing:1.4px; margin-bottom:5px; }
+.campaign-rule-button strong { font-size:10px; font-weight:400; overflow-wrap:anywhere; }
+.campaign-rules-doc-button { font-size:10px; padding:7px 9px; }
+.records-dialog-heading>div { min-width:0; flex:1; }
+.records-dialog-heading .campaign-rules-doc-button { flex-shrink:0; }
+.save-rule-set { margin-top:7px!important; color:#c4a977!important; font-size:9px!important; }
+.rule-choice-summary { font-size:11px; color:#bca4b2; line-height:1.8; white-space:pre-line; overflow-wrap:anywhere; }
+@media(max-width:750px) { .rule-sets-section { padding:20px 16px; } .rule-set-list { grid-template-columns:1fr; } .rule-sets-section .section-heading { gap:10px; flex-wrap:wrap; } .rule-set-dialog { padding:23px 18px; } .campaign-rule-button { padding:12px 15px; } }

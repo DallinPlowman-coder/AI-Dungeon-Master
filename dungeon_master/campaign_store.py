@@ -6,11 +6,13 @@ from .alignment import AlignmentMemory
 from .dice import CampaignDice
 from .battle import CampaignBattle
 from .records import CharacterSheet, NpcMemory, TurnUpdate
+from .rulesets import RuleSetConflict
 
 
 class CampaignStore:
-    def __init__(self, database):
+    def __init__(self, database, rule_sets):
         self.db = database
+        self.rule_sets = rule_sets
         self.alignment = AlignmentMemory(database)
         self.dice = CampaignDice(database)
         self.battle = CampaignBattle(database)
@@ -53,6 +55,8 @@ class CampaignStore:
             """)
             if "character_revision" not in {row["name"] for row in db.execute("PRAGMA table_info(campaigns)")}:
                 db.execute("ALTER TABLE campaigns ADD COLUMN character_revision INTEGER NOT NULL DEFAULT 0")
+            if "rule_set_id" not in {row["name"] for row in db.execute("PRAGMA table_info(campaigns)")}:
+                db.execute("ALTER TABLE campaigns ADD COLUMN rule_set_id TEXT REFERENCES rule_sets(id) ON DELETE SET NULL")
             self.alignment.initialize(db)
             self.dice.initialize(db)
             self.battle.initialize(db)
@@ -69,10 +73,12 @@ class CampaignStore:
     def list(self):
         with self.db.connect() as db:
             saves = []
-            for row in db.execute("""SELECT id, name, source_title, plan_status, plan_progress,
-                    character_json, created_at, updated_at FROM campaigns
-                    ORDER BY updated_at DESC, id"""):
-                save = {key:row[key] for key in ("id", "name", "source_title", "plan_status", "plan_progress", "created_at", "updated_at")}
+            for row in db.execute("""SELECT c.id, c.name, c.source_title, c.plan_status, c.plan_progress,
+                    c.character_json, c.created_at, c.updated_at, c.rule_set_id,
+                    r.name AS rule_set_name, r.revision AS rule_set_revision
+                    FROM campaigns c LEFT JOIN rule_sets r ON r.id = c.rule_set_id
+                    ORDER BY c.updated_at DESC, c.id"""):
+                save = {key:row[key] for key in ("id", "name", "source_title", "plan_status", "plan_progress", "created_at", "updated_at", "rule_set_id", "rule_set_name", "rule_set_revision")}
                 character = json.loads(row["character_json"])
                 save["character"] = {key:character[key] for key in ("name", "class_name", "level")}
                 saves.append(save)
@@ -87,15 +93,30 @@ class CampaignStore:
             # Foreign keys remove only this save's records; source books remain in Materials.
             return db.execute("DELETE FROM campaigns WHERE id = ?", (campaign_id,)).rowcount == 1
 
-    def create(self, name, book):
+    def create(self, name, book, rule_set_id=None):
         campaign_id, stamp = str(uuid.uuid4()), now()
         with self.db.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if rule_set_id is not None:
+                self.rule_sets.require_ready(rule_set_id, db)
             db.execute("""INSERT INTO campaigns (id, name, source_book_id, source_title, source_sha256,
-                character_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                character_json, created_at, updated_at, rule_set_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (campaign_id, name, book["id"], book["title"], book["sha256"],
-                 CharacterSheet().model_dump_json(), stamp, stamp))
+                 CharacterSheet().model_dump_json(), stamp, stamp, rule_set_id))
             self.alignment.create(db, campaign_id, 1)
         return campaign_id
+
+    def select_rules(self, campaign_id, selection):
+        selected = str(selection.rule_set_id) if selection.rule_set_id else None
+        expected = str(selection.expected_rule_set_id) if selection.expected_rule_set_id else None
+        with self.db.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT rule_set_id FROM campaigns WHERE id = ?", (campaign_id,)).fetchone()
+            if row is None or row[0] != expected:
+                raise RuleSetConflict("This campaign's rulebook selection changed. Reopen the selector before saving.")
+            if selected is not None:
+                self.rule_sets.require_ready(selected, db)
+            db.execute("UPDATE campaigns SET rule_set_id = ?, updated_at = ? WHERE id = ?", (selected, now(), campaign_id))
 
     def character(self, campaign_id, sheet, expected_revision=None):
         with self.db.connect() as db:
@@ -250,6 +271,7 @@ class CampaignStore:
         campaign = self.get(campaign_id)
         if campaign is None:
             return None
+        campaign["rule_set"] = self.rule_sets.get(campaign["rule_set_id"]) if campaign["rule_set_id"] else None
         campaign["events"] = self.events(campaign_id, player=not dm)
         campaign["npcs"] = self.npcs(campaign_id, player=not dm)
         campaign["derived"] = CharacterSheet.model_validate(campaign["character"]).derived()

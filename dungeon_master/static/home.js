@@ -43,7 +43,7 @@ function renderSaves() {
   if (recent) { continueLink.href = playURL(recent.id); continueLink.setAttribute("aria-label", `Continue ${recent.name}`); }
   portal("#save-list").innerHTML = saves.map((save,index) => `<article class="save-card${save.id === recent?.id ? " recent-save" : ""}">
     <div class="save-topline"><span>Save file ${String(index + 1).padStart(2,"0")}</span><div class="save-options">${save.id === recent?.id ? '<span class="save-tag">Continue your story</span>' : ""}${deleteSaveButton(save)}</div></div>
-    <div class="save-identity">${campaignEmblem()}<div><h3>${safe(save.name)}</h3><p>${safe(characterLine(save))}</p></div></div>
+    <div class="save-identity">${campaignEmblem()}<div><h3>${safe(save.name)}</h3><p>${safe(characterLine(save))}</p><p class="save-rule-set">Rules: ${safe(save.rule_set_name || "No set selected")}</p></div></div>
     <div class="save-detail"><span><small>Adventure</small>${safe(save.source_title)}</span><span><small>Last saved</small><time datetime="${safe(save.updated_at)}">${safe(savedTime(save.updated_at))}</time></span></div>
     <div class="save-actions"><a class="game-button game-button-outline" href="${playURL(save.id)}" aria-label="Load ${safe(save.name)}">Load campaign <span aria-hidden="true">→</span></a><a href="/campaign-docs#campaign-${save.id}" aria-label="Documents for ${safe(save.name)}">Campaign docs ↗</a></div>
   </article>`).join("") + newSaveButton();
@@ -60,7 +60,7 @@ function renderDocuments() {
   const matches = saves.filter((save) => `${save.name} ${save.source_title} ${characterLine(save)}`.toLocaleLowerCase().includes(query));
   portal("#docs-count").textContent = `${matches.length} ${matches.length === 1 ? "campaign" : "campaigns"}`;
   portal("#campaign-document-list").innerHTML = matches.length ? matches.map((save) => `<section class="campaign-folio" id="campaign-${save.id}" aria-labelledby="folio-${save.id}">
-    <div class="folio-heading">${campaignEmblem()}<div><span class="section-index">CAMPAIGN FOLIO</span><h2 id="folio-${save.id}">${safe(save.name)}</h2><p>${safe(characterLine(save))}<br>Adventure: ${safe(save.source_title)}</p></div><div class="folio-actions"><a href="${playURL(save.id)}" aria-label="Play ${safe(save.name)}">Return to game →</a>${deleteSaveButton(save)}</div></div>
+    <div class="folio-heading">${campaignEmblem()}<div><span class="section-index">CAMPAIGN FOLIO</span><h2 id="folio-${save.id}">${safe(save.name)}</h2><p>${safe(characterLine(save))}<br>Adventure: ${safe(save.source_title)}<br>Rules: ${safe(save.rule_set_name || "No set selected")}</p></div><div class="folio-actions"><a href="${playURL(save.id)}" aria-label="Play ${safe(save.name)}">Return to game →</a>${deleteSaveButton(save)}</div></div>
     <div class="folio-docs">${documentKinds.map((kind) => `<article class="folio-document"><span class="doc-symbol" aria-hidden="true">${kind.symbol}</span><h3>${kind.title}</h3><p>${kind.description}</p><a href="${playURL(save.id, kind.id === "plan" ? "plan" : kind.id)}" class="doc-open" aria-label="Open ${kind.title} for ${safe(save.name)}">${kind.id === "plan" ? "Open DM workspace" : "View & edit"} ↗</a>${kind.id === "plan" ? '<span class="doc-private">DM only · Contains future story spoilers</span>' : `<div class="doc-downloads">${["pdf","md","json"].map((format) => `<a href="/api/campaigns/${save.id}/documents/${kind.id}.${format}" download aria-label="Download ${kind.title} for ${safe(save.name)} as ${format === "md" ? "Markdown" : format.toUpperCase()}">${format === "md" ? "Markdown" : format.toUpperCase()}</a>`).join("")}</div>`}</article>`).join("")}</div>
   </section>`).join("") : `<div class="portal-empty"><h2>${saves.length ? "No matching campaigns." : "Your first story starts here."}</h2><p>${saves.length ? "Try another campaign or character name." : 'Create a campaign to begin its character sheet, log, and relationships. <a href="/">Choose a save file →</a>'}</p></div>`;
 }
@@ -118,12 +118,15 @@ async function openNewSave() {
   portal("#create-save").disabled = true;
   portal("#new-save-help").textContent = "Finding your adventure books…";
   try {
-    const {books} = await portalRequest("/api/books?collection=campaign");
+    const [{books}, {rule_sets}] = await Promise.all([portalRequest("/api/books?collection=campaign"), portalRequest("/api/rule-sets")]);
     const ready = books.filter((book) => book.status === "ready" && !book.needs_reindex);
     const selected = portal("#new-save-book").value;
     portal("#new-save-book").innerHTML = '<option value="">Choose an adventure…</option>' + ready.map((book) => `<option value="${book.id}">${safe(book.title)}</option>`).join("");
     if (ready.some((book) => book.id === selected)) portal("#new-save-book").value = selected;
     else if (ready.length === 1) portal("#new-save-book").value = ready[0].id;
+    const selectedRules = portal("#new-save-rules").value;
+    portal("#new-save-rules").innerHTML = '<option value="">No rulebook set selected</option>' + rule_sets.map((group) => `<option value="${group.id}" ${group.ready ? "" : "disabled"}>${safe(group.name)} · ${group.book_ids.length} books${group.ready ? "" : " · needs attention"}</option>`).join("");
+    if (rule_sets.some((group) => group.id === selectedRules && group.ready)) portal("#new-save-rules").value = selectedRules;
     portal("#create-save").disabled = !ready.length || creatingSave;
     portal("#new-save-help").textContent = ready.length ? "Your AI will prepare an adventure plan while you set up your character." : "Upload a campaign book and let it finish indexing first. Rulebooks stay in the separate Rules collection.";
   } catch (error) { portal("#new-save-help").textContent = error.message; }
@@ -201,6 +204,7 @@ portal("#new-save-form").addEventListener("submit", async (event) => {
   creatingSave = true; portal("#create-save").disabled = true; portal("#new-save-error").hidden = true;
   try {
     const values = Object.fromEntries(new FormData(event.target));
+    values.rule_set_id ||= null;
     const save = await portalRequest("/api/campaigns", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(values)});
     location.assign(playURL(save.id,"character"));
   } catch (error) { portal("#new-save-error").textContent = error.message; portal("#new-save-error").hidden = false; }

@@ -45,6 +45,18 @@ python -m pip install -r requirements.lock.txt
 python -m pip install --no-deps -e .
 ```
 
+## Selectable rulebook sets
+
+In **Upload Materials → Rulebook sets → Create a set**, name a group and check the indexed rulebooks it should include. A set can hold 1–50 books; a book can belong to several sets. For example, “Core Rules” can combine a player handbook, DM guide, and monster book. Grouping reuses the original passages and embeddings.
+
+Choose the set in **New campaign**, or change an existing save through **Rulebook set** in the play sidebar or Campaign Docs. Saves retain their selected set across restarts. The home screen and campaign folios show its name. **Edit set** changes its name or membership for every campaign using it; revision checks reject stale edits.
+
+**Search this set** searches its member rulebooks together. Both semantic and keyword candidates are filtered before ranking. Deleted, moved, or reindexing members mark affected sets as needing attention; incomplete sets cannot be selected or searched until repaired. Searches never fall back to unrelated books. Deleting a campaign keeps these reusable sets and their books.
+
+The API supports `GET /api/rule-sets`, `POST /api/rule-sets` with `{name, book_ids}`, and `PUT /api/rule-sets/{id}` with `{name, book_ids, expected_revision}`. IDs are UUIDs; names must be unique. `POST /api/campaigns` optionally accepts `rule_set_id`. For an existing save, `PUT /api/campaigns/{id}/rules` accepts `{rule_set_id, expected_rule_set_id}`; either value can be `null`, and both are required to protect against conflicting selections.
+
+`POST /api/retrieve` accepts either `rule_set_id` for only that set's rules, or `campaign_id` for that save's source adventure and chosen rules. Existing `collection` and `book_id` filters narrow this scope further. A campaign with no selected set searches no rulebooks. An unavailable selected set returns 409 instead of widening the scope; requesting a book outside the scope returns 400. DM context includes the selected set and a `retrieval_scope` object for the future gameplay loop. Live AI chat remains a future milestone.
+
 ## What “ragified” means here
 
 1. **Store:** validate the upload, save its Rules/Campaigns collection, and store the original file with a generated filename. SHA-256 deduplicates identical uploads within the selected collection, including files renamed by the user.
